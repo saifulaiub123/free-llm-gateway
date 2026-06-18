@@ -142,5 +142,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
+# Turborepo cache (root and per-package)
+.turbo/
+**/.turbo/
+
 # IDE/Agent Customization and Planning
 plan/

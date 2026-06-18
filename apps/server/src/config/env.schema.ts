@@ -11,7 +11,7 @@ import { z } from 'zod';
  * validated config and what `@gateway/db` reads from `process.env`.
  */
 export const envSchema = z.object({
-  PORT: z.coerce.number().int().positive().default(3001),
+  PORT: z.coerce.number().int().positive().default(5001),
 
   // 32 bytes expressed as hex == 64 characters. Required: provider-key encryption depends on it.
   ENCRYPTION_KEY: z
@@ -43,6 +43,6 @@ export type Env = z.infer<typeof envSchema>;
  * WHY a named function (not inline): `@nestjs/config` calls this as its `validate` hook, and tests
  * exercise the same path, so validation behavior is identical between boot and tests.
  */
-export function validateEnv(raw: NodeJS.ProcessEnv): Env {
+export function validateEnv(raw: Record<string, unknown>): Env {
   return envSchema.parse(raw);
 }

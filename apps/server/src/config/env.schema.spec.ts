@@ -15,7 +15,7 @@ const validBase = {
 describe('validateEnv', () => {
   it('parses a minimal valid env and applies defaults', () => {
     const env = validateEnv({ ...validBase });
-    expect(env.PORT).toBe(3001);
+    expect(env.PORT).toBe(5001);
     expect(env.JWT_ACCESS_TTL).toBe('15m');
     expect(env.JWT_REFRESH_TTL).toBe('30d');
     expect(env.MAX_FALLBACK_ATTEMPTS).toBe(20);
