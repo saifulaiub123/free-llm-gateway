@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@gateway/db": ["./packages/db/src/index.ts"],
+      "@gateway/shared-types": ["./packages/shared-types/src/index.ts"],
+      "@gateway/provider-adapters": ["./packages/provider-adapters/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".svelte-kit", "build"]
+}

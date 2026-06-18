@@ -1,0 +1,15 @@
+{
+  "name": "@gateway/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "db:generate": "echo \"db:generate not configured yet (TASK-006)\"",
+    "db:migrate": "echo \"db:migrate not configured yet (TASK-006)\""
+  }
+}
