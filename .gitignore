@@ -143,6 +143,4 @@ vite.config.ts.timestamp-*
 .vite/
 
 # IDE/Agent Customization and Planning
-.github/instructions/
-.github/skills/
 plan/
