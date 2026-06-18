@@ -9,7 +9,17 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "db:generate": "echo \"db:generate not configured yet (TASK-006)\"",
     "db:migrate": "echo \"db:migrate not configured yet (TASK-006)\""
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "vitest": "^2.0.0"
   }
 }
