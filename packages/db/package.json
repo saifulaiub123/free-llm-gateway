@@ -16,10 +16,14 @@
     "db:migrate": "echo \"db:migrate not configured yet (TASK-006)\""
   },
   "dependencies": {
-    "drizzle-orm": "^0.33.0"
+    "better-sqlite3": "^11.3.0",
+    "drizzle-orm": "^0.33.0",
+    "pg": "^8.12.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20.14.0",
+    "@types/pg": "^8.11.10",
     "vitest": "^2.0.0"
   }
 }
