@@ -105,6 +105,13 @@ packages/
 
 - All tables are declared via the **table factory** in `packages/db` so the configurable
   `DB_TABLE_PREFIX` and `DB_SCHEMA` are applied consistently. Never hand-write a bare table name.
+- Every table composes the shared **base-column sets** from `packages/db/src/columns.ts`
+  (`baseColumns` = `id`/`createdAt` on all tables; `baseEntityColumns` adds `createdBy`/`modifiedBy`/
+  `modifiedAt`/`isDeleted` on user-facing domain entities). Never re-declare `id`/`createdAt` by hand.
+- All persistence goes through a repository extending the generic **`BaseRepository<TTable>`**
+  (`apps/server/src/common/db/base.repository.ts`), which centralizes soft-delete filtering,
+  `user_id` scoping (`scopedToUser`), and optional-`tx` support. Multi-write operations are wrapped
+  in `db.transaction(tx => ...)` (the Unit-of-Work convention; Drizzle has no change tracking).
 - Code must run identically on PostgreSQL and SQLite. Avoid driver-specific SQL; when unavoidable,
   branch on `DB_DRIVER` and cover both in tests.
 - Schema changes require a Drizzle migration. Never edit a committed migration; add a new one.

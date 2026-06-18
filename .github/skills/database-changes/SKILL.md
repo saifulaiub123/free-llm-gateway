@@ -15,24 +15,38 @@ with the plan. **Always obey `AGENTS.md` and the `plan-consistency` instruction 
    [packages/db/src/table-factory.ts](../../../packages/db/src/table-factory.ts) (`pgTable` /
    `sqliteTable`). Never hand-write a bare table name — the factory applies `DB_TABLE_PREFIX` and
    `DB_SCHEMA`. A bypassed table breaks multi-tenant prefixing.
-2. **Stay cross-driver.** Code must run identically on PostgreSQL and SQLite. Avoid driver-specific
+2. **Compose the shared base-column sets** from `packages/db/src/columns.ts` (PAT-007 / GUD-009);
+   never re-declare `id`/`createdAt` by hand. `baseColumns` (`id`, `createdAt`) on ALL tables;
+   `baseEntityColumns` (adds `createdBy`, `modifiedBy`, `modifiedAt`, `isDeleted`) on user-facing
+   domain entities (users, provider keys, models, strategies, tokens). Append-only/high-volume
+   tables (`request_logs`, `rate_limit_counters`, `cooldowns`) use only `baseColumns` (hard delete /
+   TTL — no soft delete). `createdBy`/`modifiedBy` are logical FKs (plain nullable integers, no inline
+   `.references()`) to avoid a circular import with `users`.
+3. **Persistence goes through a repository extending `BaseRepository<TTable>`** (PAT-008,
+   `apps/server/src/common/db/base.repository.ts`): use its `findById`/`findAll`/`create`/`update`/
+   `softDelete`/`hardDelete`/`exists`/`count` (each takes an optional `tx`); add only entity-specific
+   queries in the concrete repo. Soft-delete-capable tables auto-filter `is_deleted = false`. Scope
+   user-owned reads with `scopedToUser(userId)` (SEC-004). Wrap multi-write operations in
+   `db.transaction(tx => ...)` and pass `tx` to each repository call (the Unit-of-Work convention).
+4. **Stay cross-driver.** Code must run identically on PostgreSQL and SQLite. Avoid driver-specific
    column types/SQL; when unavoidable, branch on `resolveDialect()` / `isPostgres()` and test both.
-3. **Never edit a committed migration.** Add a new one. Schema changes always ship a migration.
-4. **Relative imports need explicit `.js` extensions** (strict `NodeNext` in `tsconfig.base.json`),
+5. **Never edit a committed migration.** Add a new one. Schema changes always ship a migration.
+6. **Relative imports need explicit `.js` extensions** (strict `NodeNext` in `tsconfig.base.json`),
    e.g. `from './table-factory.js'`. Omitting the extension fails `typecheck`.
-5. **No behavior without a test.** Add/extend a `*.spec.ts` in the same change.
-6. **Run the gate:** `pnpm --filter @gateway/db test && pnpm --filter @gateway/db typecheck && pnpm --filter @gateway/db lint`.
+7. **No behavior without a test.** Add/extend a `*.spec.ts` in the same change.
+8. **Run the gate:** `pnpm --filter @gateway/db test && pnpm --filter @gateway/db typecheck && pnpm --filter @gateway/db lint`.
 
 ## Procedure: Add a Drizzle entity (table)
 
-1. Create `packages/db/src/schema/<entity>.ts`. Import the creator from the factory:
+1. Create `packages/db/src/schema/<entity>.ts`. Compose a base-column set + the factory creator:
    ```ts
    import { sqliteTable } from '../table-factory.js'; // or pgTable for the pg variant
    import { integer, text } from 'drizzle-orm/sqlite-core';
+   import { baseEntityColumns } from '../columns.js'; // or baseColumns for append-only tables
 
    /** TSDoc: what this table is and WHY it exists. */
    export const widgets = sqliteTable('widgets', {
-     id: integer('id').primaryKey({ autoIncrement: true }),
+     ...baseEntityColumns,
      userId: integer('user_id').notNull(),
      name: text('name').notNull(),
    });
@@ -41,9 +55,10 @@ with the plan. **Always obey `AGENTS.md` and the `plan-consistency` instruction 
 3. Generate the migration: `pnpm db:generate` (writes to `migrations/<driver>/`). Never edit it after commit.
 4. If the column types differ per dialect, author the Postgres variant and derive the SQLite variant
    from a shared column spec (`packages/db/src/columns.ts`) — keep two variants ONLY where required.
-5. Add the repository in the owning server module (`controller → service → repository → db`); scope
-   every user-owned query by `user_id` (admin bypass). Register it as a NestJS provider.
-6. Tests: schema round-trip, `user_id` scoping, prefix applied. Run the gate.
+5. Add the repository in the owning server module (`controller → service → repository → db`) by
+   extending `BaseRepository<typeof widgets>`; scope every user-owned query with `scopedToUser(userId)`
+   (admin bypass). Register it as a NestJS provider.
+6. Tests: schema round-trip, soft-delete hides rows, `user_id` scoping, prefix applied. Run the gate.
 
 ## Procedure: Alter an existing table (add/rename/drop column, index, constraint)
 
