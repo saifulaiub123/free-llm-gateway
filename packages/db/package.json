@@ -12,8 +12,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:generate": "echo \"db:generate not configured yet (TASK-006)\"",
-    "db:migrate": "echo \"db:migrate not configured yet (TASK-006)\""
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/migrate.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
@@ -24,6 +24,8 @@
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20.14.0",
     "@types/pg": "^8.11.10",
+    "drizzle-kit": "^0.24.0",
+    "tsx": "^4.19.0",
     "vitest": "^2.0.0"
   }
 }

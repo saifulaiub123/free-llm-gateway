@@ -18,3 +18,5 @@ export {
 } from './table-factory.js';
 
 export { createDb, type Db, type Schema } from './connection.js';
+
+export { runMigrations } from './migrate.js';

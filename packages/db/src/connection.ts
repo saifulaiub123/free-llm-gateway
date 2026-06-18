@@ -3,6 +3,7 @@ import { drizzle as drizzleSqlite, type BetterSQLite3Database } from 'drizzle-or
 import { drizzle as drizzlePg, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { resolveDialect } from './table-factory.js';
+import { resolveSqliteFilePath } from './db-paths.js';
 import * as schema from './schema/index.js';
 
 /** The full set of Drizzle schema entities (grows as later phases add tables). */
@@ -17,9 +18,6 @@ export type Schema = typeof schema;
  */
 export type Db = NodePgDatabase<Schema> | BetterSQLite3Database<Schema>;
 
-/** Fallback SQLite location for zero-config development. */
-const DEFAULT_SQLITE_URL = 'file:./data/llm-gateway.db';
-
 /** Builds a PostgreSQL-backed Drizzle client from `DB_URL`. */
 const createPostgresDb = (): Db => {
   const connectionString = process.env.DB_URL;
@@ -28,13 +26,9 @@ const createPostgresDb = (): Db => {
   return drizzlePg(pool, { schema });
 };
 
-/**
- * Builds a SQLite-backed Drizzle client. Strips a leading `file:` so both
- * `file:./data/gateway.db` and a bare path work, and supports `:memory:`.
- */
+/** Builds a SQLite-backed Drizzle client at the configured file path (or `:memory:`). */
 const createSqliteDb = (): Db => {
-  const url = process.env.DB_URL ?? DEFAULT_SQLITE_URL;
-  const sqlite = new Database(url.replace(/^file:/, ''));
+  const sqlite = new Database(resolveSqliteFilePath());
   return drizzleSqlite(sqlite, { schema });
 };
 
