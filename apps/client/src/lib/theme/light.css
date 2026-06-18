@@ -1,0 +1,18 @@
+/**
+ * Light theme tokens.
+ *
+ * WHY a separate file with semantic names: each theme is self-contained, so adding a new theme is
+ * a copy of this token block under a new `[data-theme='...']` selector — no component changes. The
+ * `:root` selector makes light the default before the theme store runs (prevents a flash).
+ */
+
+:root,
+[data-theme='light'] {
+  --theme-background: oklch(0.99 0 0);
+  --theme-surface: oklch(1 0 0);
+  --theme-foreground: oklch(0.21 0.03 257);
+  --theme-muted: oklch(0.55 0.02 257);
+  --theme-border: oklch(0.92 0.01 257);
+  --theme-primary: oklch(0.55 0.18 264);
+  --theme-primary-foreground: oklch(0.99 0 0);
+}

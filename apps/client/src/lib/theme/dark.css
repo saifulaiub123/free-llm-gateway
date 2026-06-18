@@ -1,0 +1,16 @@
+/**
+ * Dark theme tokens.
+ *
+ * Mirrors the token set in `light.css` under the `[data-theme='dark']` selector. The theme store
+ * toggles `data-theme` on `<html>`, so switching is instant and component styles never change.
+ */
+
+[data-theme='dark'] {
+  --theme-background: oklch(0.21 0.03 257);
+  --theme-surface: oklch(0.27 0.03 257);
+  --theme-foreground: oklch(0.98 0.01 257);
+  --theme-muted: oklch(0.71 0.02 257);
+  --theme-border: oklch(0.37 0.03 257);
+  --theme-primary: oklch(0.7 0.16 264);
+  --theme-primary-foreground: oklch(0.21 0.03 257);
+}

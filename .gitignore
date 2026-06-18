@@ -69,6 +69,12 @@ web_modules/
 .env
 .env.*
 !.env.example
+# Client public env files (VITE_-only, no secrets) are committed so builds are reproducible.
+!.env.development
+!.env.production
+# Per-machine local overrides stay ignored.
+.env.local
+.env.*.local
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -97,6 +103,9 @@ dist
 
 # Sveltekit cache directory
 .svelte-kit/
+
+# SvelteKit adapter-static build output
+apps/client/build/
 
 # vitepress build output
 **/.vitepress/dist

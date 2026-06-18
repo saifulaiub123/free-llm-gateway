@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+/* Theme token files. Add a new theme by creating another file + selector and importing it here. */
+@import './lib/theme/light.css';
+@import './lib/theme/dark.css';
+
+/*
+ * Map semantic theme tokens to Tailwind color utilities (`bg-background`, `text-foreground`, ...).
+ * Components reference only these semantic utilities, so switching `data-theme` re-themes the whole
+ * app with no markup changes.
+ */
+@theme inline {
+  --color-background: var(--theme-background);
+  --color-surface: var(--theme-surface);
+  --color-foreground: var(--theme-foreground);
+  --color-muted: var(--theme-muted);
+  --color-border: var(--theme-border);
+  --color-primary: var(--theme-primary);
+  --color-primary-foreground: var(--theme-primary-foreground);
+}
