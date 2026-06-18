@@ -1,0 +1,22 @@
+# Keep the Docker build context small and reproducible.
+**/node_modules
+**/dist
+**/build
+**/.svelte-kit
+**/.turbo
+.git
+.github
+plan
+docs
+
+# Tests are not needed in the image.
+**/*.spec.ts
+**/*.e2e-spec.ts
+
+# Never copy secrets; keep committed public/example env files.
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
+!apps/client/.env.development
+!apps/client/.env.production

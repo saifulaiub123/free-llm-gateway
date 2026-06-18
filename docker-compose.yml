@@ -1,0 +1,43 @@
+# Free LLM Gateway — local container stack.
+# Quick start:  cp .env.example .env  &&  docker compose up --build
+# With Postgres: docker compose --profile postgres up --build   (and set DB_DRIVER=postgres)
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - '5001:5001'
+    environment:
+      PORT: 5001
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      DB_DRIVER: ${DB_DRIVER:-sqlite}
+      DB_URL: ${DB_URL:-file:./data/llm-gateway.db}
+      DB_SCHEMA: ${DB_SCHEMA:-public}
+      DB_TABLE_PREFIX: ${DB_TABLE_PREFIX:-}
+      MAX_FALLBACK_ATTEMPTS: ${MAX_FALLBACK_ATTEMPTS:-20}
+    volumes:
+      # Persist the SQLite database across container restarts.
+      - gateway-data:/app/apps/server/data
+    restart: unless-stopped
+
+  # Optional PostgreSQL. Enable with: docker compose --profile postgres up
+  postgres:
+    image: postgres:16-alpine
+    profiles: ['postgres']
+    environment:
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: gateway
+      POSTGRES_DB: gateway
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  gateway-data:
+  postgres-data:
