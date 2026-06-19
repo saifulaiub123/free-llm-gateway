@@ -8,6 +8,13 @@
       "when": 1781884666163,
       "tag": "0000_small_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1781886127722,
+      "tag": "0001_zippy_centennial",
+      "breakpoints": true
     }
   ]
 }

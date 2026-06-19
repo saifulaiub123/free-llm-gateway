@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import type { Db, Schema } from '../../types.js';
-import { resolveSqliteFilePath } from './paths.js';
+import { ensureParentDir, resolveSqliteFilePath } from './paths.js';
 
 /**
  * Builds a SQLite-backed Drizzle client at the configured file path (or `:memory:`).
@@ -11,6 +11,8 @@ import { resolveSqliteFilePath } from './paths.js';
  * schema → registry → dialect → schema).
  */
 export const createSqliteDrizzle = (schema: Schema): Db => {
-  const sqlite = new Database(resolveSqliteFilePath());
+  const filePath = resolveSqliteFilePath();
+  ensureParentDir(filePath); // create ./data (or any configured dir) so opening never fails
+  const sqlite = new Database(filePath);
   return drizzleSqlite(sqlite, { schema });
 };

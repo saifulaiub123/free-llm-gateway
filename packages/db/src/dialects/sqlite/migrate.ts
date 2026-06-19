@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import { migrate as migrateSqlite } from 'drizzle-orm/better-sqlite3/migrator';
-import { resolveSqliteFilePath } from './paths.js';
+import { ensureParentDir, resolveSqliteFilePath } from './paths.js';
 
 /** Default committed migrations folder for SQLite (`packages/db/migrations/sqlite`). */
 const defaultMigrationsFolder = (): string =>
@@ -14,7 +14,9 @@ const defaultMigrationsFolder = (): string =>
  */
 export const runSqliteMigrator = async (migrationsFolder?: string): Promise<void> => {
   const folder = migrationsFolder ?? defaultMigrationsFolder();
-  const sqlite = new Database(resolveSqliteFilePath());
+  const filePath = resolveSqliteFilePath();
+  ensureParentDir(filePath); // create ./data (or any configured dir) so opening never fails
+  const sqlite = new Database(filePath);
   try {
     migrateSqlite(drizzleSqlite(sqlite), { migrationsFolder: folder });
   } finally {

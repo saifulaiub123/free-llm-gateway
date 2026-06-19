@@ -1,3 +1,5 @@
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { dbUrl } from '../../common/env.js';
 
 /**
@@ -18,3 +20,15 @@ export const resolveSqliteUrl = (): string => dbUrl() ?? DEFAULT_SQLITE_URL;
  * `:memory:` through unchanged for in-memory databases.
  */
 export const resolveSqliteFilePath = (): string => resolveSqliteUrl().replace(/^file:/, '');
+
+/**
+ * Ensures the parent directory of the resolved SQLite file exists before the database is opened, so a
+ * fresh checkout (or any newly-configured `DB_URL` path) never fails with "unable to open database
+ * file". Skips `:memory:`, which has no on-disk location. Idempotent (`recursive: true`).
+ */
+export const ensureParentDir = (filePath: string): void => {
+  if (filePath === ':memory:') {
+    return;
+  }
+  mkdirSync(dirname(filePath), { recursive: true });
+};

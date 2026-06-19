@@ -6,3 +6,4 @@
  */
 export { users } from './users.js';
 export { refreshTokens } from './refresh-tokens.js';
+export { apiTokens } from './api-tokens.js';
