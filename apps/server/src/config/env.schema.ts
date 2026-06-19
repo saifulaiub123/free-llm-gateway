@@ -5,8 +5,8 @@ import { z } from 'zod';
  * or malformed (fail-fast). Consumed by `@nestjs/config` in TASK-002.
  *
  * WHY the `DB_*` vars are optional here (no re-declared defaults): the database package
- * (`@gateway/db`) owns those defaults at the point of use — `db-paths.ts` for `DB_URL`,
- * `table-factory.ts` for `DB_DRIVER`/`DB_SCHEMA`/`DB_TABLE_PREFIX`. This schema validates their
+ * (`@gateway/db`) owns those defaults at the point of use — each dialect's `paths.ts` for `DB_URL`
+ * and `common/env.ts` for `DB_DRIVER`/`DB_SCHEMA`/`DB_TABLE_PREFIX`. This schema validates their
  * shape only, so the default values live in exactly one place and can never drift between the
  * validated config and what `@gateway/db` reads from `process.env`.
  */

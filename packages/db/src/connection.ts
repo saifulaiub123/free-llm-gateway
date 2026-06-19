@@ -1,45 +1,17 @@
-import Database from 'better-sqlite3';
-import { drizzle as drizzleSqlite, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { drizzle as drizzlePg, type NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import { resolveDialect } from './table-factory.js';
-import { resolveSqliteFilePath } from './db-paths.js';
 import * as schema from './schema/index.js';
+import { getActiveDialect } from './dialects/registry.js';
+import type { Db } from './types.js';
 
-/** The full set of Drizzle schema entities (grows as later phases add tables). */
-export type Schema = typeof schema;
-
-/**
- * Driver-agnostic database handle the rest of the app depends on.
- *
- * WHY a union (not a single type): the PostgreSQL and SQLite Drizzle clients are
- * distinct types, but every consumer programs against this abstract `Db` so a
- * dialect switch is a config change, never a code change.
- */
-export type Db = NodePgDatabase<Schema> | BetterSQLite3Database<Schema>;
-
-/** Builds a PostgreSQL-backed Drizzle client from `DB_URL`. */
-const createPostgresDb = (): Db => {
-  const connectionString = process.env.DB_URL;
-  // exactOptionalPropertyTypes: only pass connectionString when defined.
-  const pool = connectionString ? new Pool({ connectionString }) : new Pool();
-  return drizzlePg(pool, { schema });
-};
-
-/** Builds a SQLite-backed Drizzle client at the configured file path (or `:memory:`). */
-const createSqliteDb = (): Db => {
-  const sqlite = new Database(resolveSqliteFilePath());
-  return drizzleSqlite(sqlite, { schema });
-};
+export type { Db, Schema } from './types.js';
 
 /**
  * Creates a Drizzle client for the configured dialect.
  *
- * WHY a factory: the rest of the app depends on the abstract {@link Db} type, never
- * on a concrete driver, so switching Postgres <-> SQLite is a `DB_DRIVER` config
- * change with zero code changes. A new dialect plugs in via one branch here, mirroring
- * the table-factory dialect registry (Open/Closed — GUD-008 / PAT-006).
+ * WHY a thin dispatcher: the rest of the app depends on the abstract {@link Db} type, never on a
+ * concrete driver, so switching dialects is a `DB_DRIVER` config change with zero code changes. The
+ * active dialect module owns the driver wiring; the schema barrel is passed in so dialect modules
+ * never import it (avoiding an import cycle).
  */
 export function createDb(): Db {
-  return resolveDialect() === 'postgres' ? createPostgresDb() : createSqliteDb();
+  return getActiveDialect().createDrizzle(schema);
 }

@@ -1,22 +1,35 @@
 /**
  * Public barrel for the `@gateway/db` package.
  *
- * The table factory (TASK-004) is the single source of truth for table naming
- * (prefix + schema) and the dialect registry. The connection factory (TASK-005)
- * builds the driver-agnostic Drizzle client. Schema and migrations are added in
- * later phases.
+ * The dialect registry (PAT-009) is the single source of truth: one self-contained module per
+ * database under `src/dialects/<name>/`, resolved via `getActiveDialect()`. The connection and
+ * migration entrypoints, schema column factories, and audit helper all dispatch through it.
  */
 export {
-  pgTable,
-  sqliteTable,
-  tableCreators,
+  getActiveDialect,
   resolveDialect,
   isPostgres,
-  targetSchema,
+  dialectRegistry,
   DEFAULT_DIALECT,
-  type SupportedDialect,
-} from './table-factory.js';
+} from './dialects/registry.js';
 
-export { createDb, type Db, type Schema } from './connection.js';
+export type {
+  SupportedDialect,
+  DialectModule,
+  ColumnKit,
+} from './dialects/dialect.contract.js';
+
+export { createDb } from './connection.js';
+export type { Db, Schema } from './types.js';
 
 export { runMigrations } from './migrate.js';
+
+export {
+  baseColumns,
+  baseEntityColumns,
+  makeBaseColumns,
+  makeBaseEntityColumns,
+} from './schema/columns.js';
+
+export { auditTableExtras } from './schema/audit.js';
+export type { AuditExtras, AuditOwnershipColumns } from './schema/audit.js';

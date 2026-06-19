@@ -103,17 +103,27 @@ packages/
 
 ## 6. Database Rules
 
-- All tables are declared via the **table factory** in `packages/db` so the configurable
-  `DB_TABLE_PREFIX` and `DB_SCHEMA` are applied consistently. Never hand-write a bare table name.
-- Every table composes the shared **base-column sets** from `packages/db/src/columns.ts`
-  (`baseColumns` = `id`/`createdAt` on all tables; `baseEntityColumns` adds `createdBy`/`modifiedBy`/
-  `modifiedAt`/`isDeleted` on user-facing domain entities). Never re-declare `id`/`createdAt` by hand.
+- Each database is a self-contained **dialect module** under `packages/db/src/dialects/<name>/`
+  implementing the `DialectModule` contract (table creator, `ColumnKit`, audit helper, connection,
+  migrator, drizzle-kit config). Entities create tables via `getActiveDialect().table` (prefix +
+  `DB_SCHEMA` applied) — never hand-write a bare table name. Common code (schema, connection, migrate,
+  config) MUST NOT branch on the driver inline; it resolves through `getActiveDialect()` (GUD-008/011, PAT-009).
+- Every table composes the shared **base-column sets** from `packages/db/src/schema/columns.ts`
+  (built once from the active dialect's `ColumnKit`): `baseColumns` = `id`/`createdAt` on all tables;
+  `baseEntityColumns` adds `createdBy`/`modifiedBy`/`modifiedAt`/`isActive`/`isDeleted` on user-facing
+  domain entities. Never re-declare `id`/`createdAt` by hand, and author entity columns via `columnKit.*`
+  (never raw `sqlite-core`/`pg-core` builders) so one definition serves every dialect.
+- Foreign keys and indexes are declared, not implied: every FK column carries a real `FOREIGN KEY`
+  plus an index. `createdBy`/`modifiedBy` reference `users.id` (`ON DELETE SET NULL`) via the
+  `auditTableExtras` helper; owning `*_id` FKs cascade. Add composite indexes for hot scoped lookups.
 - All persistence goes through a repository extending the generic **`BaseRepository<TTable>`**
   (`apps/server/src/common/db/base.repository.ts`), which centralizes soft-delete filtering,
   `user_id` scoping (`scopedToUser`), and optional-`tx` support. Multi-write operations are wrapped
   in `db.transaction(tx => ...)` (the Unit-of-Work convention; Drizzle has no change tracking).
-- Code must run identically on PostgreSQL and SQLite. Avoid driver-specific SQL; when unavoidable,
-  branch on `DB_DRIVER` and cover both in tests.
+- Code must run identically on every supported dialect. Adding a database = one new `dialects/<name>/`
+  folder + one `dialectRegistry` line, with zero changes to existing schema/repositories. Avoid driver-
+  specific SQL; when unavoidable, branch on `getActiveDialect()`/`isPostgres()` and cover both in tests.
+  NOTE: Drizzle supports PostgreSQL, MySQL/MariaDB, and SQLite — NOT SQL Server.
 - Schema changes require a Drizzle migration. Never edit a committed migration; add a new one.
 
 ---
