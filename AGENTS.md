@@ -189,3 +189,12 @@ pnpm db:migrate              # apply migrations
 4. The corresponding `TASK-XXX` row in [`../feature-free-llm-gateway-1.md`](../feature-free-llm-gateway-1.md)
    is marked complete with the date.
 5. No secret material in code, logs, or responses.
+
+## 11. Continuous Learning (keep skills & plans true)
+
+Whenever reality diverges from what a skill, instruction, or plan doc says — the user corrects an
+approach, you change a plan `.md`, a documented step fails, or you hit a fault/gotcha it did not warn
+about — load the **`learn-from-changes-and-faults`** skill and propagate the learning back into every
+related skill, instruction, plan row/guide, `AGENTS.md` rule, and `/memories/` note (then grep the old
+value to confirm no stale references). The FILES are the source of truth; never let a fix live only in
+chat. Surface conflicts with always-on rules before overriding; never persist secrets.
