@@ -91,10 +91,10 @@ duplicate the same rule in five files.
 
 ## Worked example (this repo)
 
-While building the pluggable-dialect layer, a **fault** surfaced: drizzle-kit's config loader cannot
-resolve NodeNext `.js` import specifiers through the dialect modules. The loop ran:
-1. Delta: *"`drizzle.config.ts` was meant to read `getActiveDialect().kit`; reality — drizzle-kit's
-   loader cannot import the dialect modules, so the config must be self-contained."*
+While building the pluggable database-provider layer, a **fault** surfaced: drizzle-kit's config loader cannot
+resolve NodeNext `.js` import specifiers through the provider modules. The loop ran:
+1. Delta: *"`drizzle.config.ts` was meant to read `getActiveProvider()`; reality — drizzle-kit's
+   loader cannot import the provider modules, so the config must be self-contained."*
 2. Located sources: the spec (`GUD-011`, `PAT-009`, `FILE-002`), the phase-0.5 guide, the
    `database-changes` and `add-database-dialect` skills, and the memory breadcrumb.
 3. Updated all of them in sync — carved drizzle.config out as the one documented inline-branch

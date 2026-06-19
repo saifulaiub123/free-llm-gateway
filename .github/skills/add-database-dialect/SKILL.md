@@ -108,7 +108,7 @@ export const mysqlColumnKit = {
 ```
 
 **`audit.ts`** — FK + index helper; params/return use the canonical shapes, columns cast to the
-engine column type (mirror `dialects/postgres/audit.ts`):
+engine column type (mirror `providers/postgres/audit.ts`):
 ```ts
 import { foreignKey, index, type AnyMySqlColumn } from 'drizzle-orm/mysql-core';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
@@ -258,7 +258,7 @@ DB_PROVIDER=mysql pnpm --filter server db:generate   # emits engine DDL (manual;
 
 ## Plan / docs sync (required — plan-consistency "Database provider" row)
 
-Update in ONE pass: `CON-001`, `DEP-003`, the `DB_DRIVER` enum (TASK-003), `GUD-008`/`GUD-011`,
+Update in ONE pass: `CON-001`, `DEP-003`, the `DB_PROVIDER` enum (TASK-003), `GUD-008`/`GUD-011`,
 `PAT-006`/`PAT-009`, `FILE-002` in `plan/feature-free-llm-gateway-1.md`; the phase-0.5 guide; and add
 a `TASK-0XX` row (appended, never renumbered) marked complete with the date.
 
