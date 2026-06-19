@@ -14,3 +14,14 @@ export type Schema = typeof schema;
  * without creating an import cycle.
  */
 export type Db = NodePgDatabase<Schema> | BetterSQLite3Database<Schema>;
+
+/**
+ * The query-execution surface a repository programs against.
+ *
+ * WHY the canonical (SQLite) client type and not the {@link Db} union: the driver clients have
+ * divergent query APIs (better-sqlite3 is synchronous — `.all()/.get()/.run()`; node-postgres is
+ * awaitable), so the repository layer targets the tested SQLite surface (the canonical dialect —
+ * PAT-009) and narrows the active client to it. Live PostgreSQL execution is part of the follow-up to
+ * TASK-071 (PostgreSQL is compile-only today).
+ */
+export type DbExecutor = BetterSQLite3Database<Schema>;

@@ -46,12 +46,15 @@ See [`../implementation/phase-5-routing.md`](../implementation/phase-5-routing.m
 
 ## Procedure: Add a Drizzle Entity + Migration
 
-1. Define the table in `packages/db/src/schema/<entity>.ts` using the **table factory**
-   (`createTable`) so `DB_TABLE_PREFIX` + `DB_SCHEMA` apply. Never hand-write a bare name.
+1. Define the table in `packages/db/src/schema/<entity>.ts` authored ONCE via `getActiveDialect()`
+   (`table`/`columnKit`/`index`) so `DB_TABLE_PREFIX` + `DB_SCHEMA` apply and one definition serves
+   every dialect. Never hand-write a bare name or raw `sqlite-core`/`pg-core` builders. See the
+   **database-changes** skill for the full entity recipe.
 2. Export it from the schema barrel and add any relations.
 3. Run `pnpm db:generate` to produce a migration; never edit a committed migration.
-4. Ensure it works on both SQLite and PostgreSQL (no driver-specific column types without a branch).
-5. Add the repository in the owning module; register it as a NestJS provider.
+4. Ensure it works on both SQLite and PostgreSQL (the kit guarantees this; avoid driver-specific SQL).
+5. Add the repository in the owning module by extending `BaseRepository<typeof entity>`; register it
+   as a NestJS provider.
 
 See [`../implementation/phase-0-scaffolding.md`](../implementation/phase-0-scaffolding.md).
 

@@ -1,0 +1,140 @@
+import {
+  and,
+  eq,
+  sql,
+  type InferInsertModel,
+  type InferSelectModel,
+  type SQL,
+} from 'drizzle-orm';
+import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
+import type { Db, DbExecutor } from '@gateway/db';
+
+/**
+ * Generic data-mapper repository over a Drizzle table.
+ *
+ * WHY a base class: it centralizes the conventions every entity needs exactly once — soft-delete
+ * filtering (`is_deleted = false`), `user_id` scoping (SEC-004), and optional-`tx` support — so
+ * concrete repositories add ONLY entity-specific queries. The optional `tx` parameter is the Drizzle
+ * stand-in for EF's `DbContext`-as-Unit-of-Work (Drizzle has no change tracking): a service wraps
+ * several writes in `db.transaction(tx => ...)` and passes `tx` to each call for atomicity.
+ *
+ * Methods are async (Promise-returning) so callers stay driver-agnostic, while execution runs against
+ * the canonical SQLite surface ({@link DbExecutor}); see its WHY in `@gateway/db`.
+ */
+export abstract class BaseRepository<TTable extends SQLiteTable> {
+  /**
+   * @param db The shared, driver-agnostic Drizzle client (injected via the `DB` token).
+   * @param table The Drizzle table this repository manages.
+   * @param softDeletable Whether the table carries the audit/soft-delete columns (composed
+   *   `baseEntityColumns`). When false, `softDelete` is rejected and no `is_deleted` filter applies.
+   */
+  protected constructor(
+    protected readonly db: Db,
+    protected readonly table: TTable,
+    protected readonly softDeletable: boolean,
+  ) {}
+
+  /** Narrows the active client (or a passed transaction) to the canonical execution surface. */
+  protected exec(tx?: Db): DbExecutor {
+    return (tx ?? this.db) as unknown as DbExecutor;
+  }
+
+  /** Looks a column up by its JS property name (e.g. `id`, `isDeleted`, `userId`). */
+  private column(name: string): SQLiteColumn {
+    return (this.table as unknown as Record<string, SQLiteColumn>)[name] as SQLiteColumn;
+  }
+
+  /** `is_deleted = false` when the table is soft-deletable, else no predicate. */
+  private notDeleted(): SQL | undefined {
+    return this.softDeletable ? eq(this.column('isDeleted'), false) : undefined;
+  }
+
+  /** Combines the primary-key predicate with the soft-delete filter. */
+  private byId(id: number): SQL {
+    return and(eq(this.column('id'), id), this.notDeleted()) as SQL;
+  }
+
+  /** Adds a `user_id = :userId` predicate so callers cannot read another user's rows (SEC-004). */
+  protected scopedToUser(userId: number): SQL {
+    return eq(this.column('userId'), userId);
+  }
+
+  /** Finds a single row by primary key (excludes soft-deleted rows). */
+  async findById(id: number, tx?: Db): Promise<InferSelectModel<TTable> | undefined> {
+    const row = this.exec(tx).select().from(this.table).where(this.byId(id)).get();
+    return row as InferSelectModel<TTable> | undefined;
+  }
+
+  /** Finds all rows matching an optional predicate (excludes soft-deleted rows). */
+  async findAll(where?: SQL, tx?: Db): Promise<InferSelectModel<TTable>[]> {
+    const rows = this.exec(tx)
+      .select()
+      .from(this.table)
+      .where(and(where, this.notDeleted()))
+      .all();
+    return rows as InferSelectModel<TTable>[];
+  }
+
+  /** Inserts a row and returns it. */
+  async create(values: InferInsertModel<TTable>, tx?: Db): Promise<InferSelectModel<TTable>> {
+    const rows = this.exec(tx)
+      .insert(this.table)
+      .values(values)
+      .returning()
+      .all() as InferSelectModel<TTable>[];
+    const row = rows[0];
+    if (!row) {
+      throw new Error('create() did not return the inserted row');
+    }
+    return row;
+  }
+
+  /** Updates a row by id (stamps `modifiedAt` on audited tables) and returns the new row. */
+  async update(
+    id: number,
+    patch: Partial<InferInsertModel<TTable>>,
+    tx?: Db,
+  ): Promise<InferSelectModel<TTable> | undefined> {
+    // Audited tables track when a row last changed; baseColumns-only tables have no such column.
+    const values = this.softDeletable ? { ...patch, modifiedAt: new Date() } : patch;
+    const rows = this.exec(tx)
+      .update(this.table)
+      .set(values as never) // generic set-source over an abstract TTable
+      .where(this.byId(id))
+      .returning()
+      .all() as InferSelectModel<TTable>[];
+    return rows[0];
+  }
+
+  /** Soft-deletes a row (`is_deleted = true`). Throws if the table is not soft-deletable. */
+  async softDelete(id: number, tx?: Db): Promise<void> {
+    if (!this.softDeletable) {
+      throw new Error('softDelete() requires a table composing baseEntityColumns');
+    }
+    this.exec(tx)
+      .update(this.table)
+      .set({ isDeleted: true, modifiedAt: new Date() } as never)
+      .where(eq(this.column('id'), id))
+      .run();
+  }
+
+  /** Physically deletes a row (no soft-delete filter). */
+  async hardDelete(id: number, tx?: Db): Promise<void> {
+    this.exec(tx).delete(this.table).where(eq(this.column('id'), id)).run();
+  }
+
+  /** True when a row with the id exists (excludes soft-deleted rows). */
+  async exists(id: number, tx?: Db): Promise<boolean> {
+    return (await this.findById(id, tx)) !== undefined;
+  }
+
+  /** Counts rows matching an optional predicate (excludes soft-deleted rows). */
+  async count(where?: SQL, tx?: Db): Promise<number> {
+    const result = this.exec(tx)
+      .select({ value: sql<number>`count(*)` })
+      .from(this.table)
+      .where(and(where, this.notDeleted()))
+      .get();
+    return result?.value ?? 0;
+  }
+}
