@@ -1,21 +1,21 @@
-import type { ProviderModule, SupportedProvider } from './provider.contract.js';
-import { sqliteProvider } from './sqlite/index.js';
-import { postgresProvider } from './postgres/index.js';
+import type { ProviderModule, SupportedProvider } from './dialect.contract.js';
+import { sqliteDialect } from './sqlite/index.js';
+import { postgresDialect } from './postgres/index.js';
 import { dbProvider } from '../common/env.js';
 
-/** Default provider when `DB_PROVIDER` is unset — zero-config development uses SQLite. */
+/** Default dialect when `DB_DRIVER` is unset — zero-config development uses SQLite. */
 export const DEFAULT_PROVIDER: SupportedProvider = 'sqlite';
 
 /**
- * Registry of every supported provider module.
+ * Registry of every supported dialect module.
  *
- * WHY `satisfies Record<SupportedProvider, ProviderModule>`: adding a provider to the union without
+ * WHY `satisfies Record<SupportedDialect, DialectModule>`: adding a dialect to the union without
  * registering its module here becomes a compile error — the single guard that keeps the supported
  * set honest and makes adding a database one folder + one line (Open/Closed — GUD-008 / PAT-009).
  */
 export const providerRegistry = {
-  sqlite: sqliteProvider,
-  postgres: postgresProvider,
+  sqlite: sqliteDialect,
+  postgres: postgresDialect,
 } satisfies Record<SupportedProvider, ProviderModule>;
 
 /**

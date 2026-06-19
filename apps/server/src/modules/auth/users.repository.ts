@@ -1,14 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
-import { users, type Db } from '../../database/index.js';
-import { DB } from '../../database/database.module.js';
+import { users, DatabaseService } from '../../database/index.js';
 import { BaseRepository } from '../../common/db/base.repository.js';
 
 /** Persistence for `users`, adding the auth-specific `findByEmail` lookup. */
 @Injectable()
 export class UsersRepository extends BaseRepository<typeof users> {
-  constructor(@Inject(DB) db: Db) {
-    super(db, users, true); // users compose baseEntityColumns -> soft-deletable
+  constructor(database: DatabaseService) {
+    super(database, users, true); // users compose baseEntityColumns -> soft-deletable
   }
 
   /** Finds an active (non-deleted) user by email, or `undefined`. */

@@ -7,7 +7,7 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
-import type { Db } from '../../database/index.js';
+import type { Db, DatabaseService } from '../../database/index.js';
 
 /**
  * Generic data-mapper repository over a Drizzle table.
@@ -23,20 +23,20 @@ import type { Db } from '../../database/index.js';
  */
 export abstract class BaseRepository<TTable extends SQLiteTable> {
   /**
-   * @param db The shared, driver-agnostic Drizzle client (injected via the `DB` token).
+   * @param database The injected {@link DatabaseService}; queries read its `db` lazily at call time.
    * @param table The Drizzle table this repository manages.
    * @param softDeletable Whether the table carries the audit/soft-delete columns (composed
    *   `baseEntityColumns`). When false, `softDelete` is rejected and no `is_deleted` filter applies.
    */
   protected constructor(
-    protected readonly db: Db,
+    protected readonly database: DatabaseService,
     protected readonly table: TTable,
     protected readonly softDeletable: boolean,
   ) {}
 
   /** Resolves the active client, or a passed transaction, to run a query against. */
   protected exec(tx?: Db): Db {
-    return tx ?? this.db;
+    return tx ?? this.database.db;
   }
 
   /** Looks a column up by its JS property name (e.g. `id`, `isDeleted`, `userId`). */

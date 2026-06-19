@@ -26,7 +26,7 @@ adds task-specific procedures on top of those always-on rules.
 3. Override **only** what differs — usually `fetchModels(key)` and `classifyFreeModels(models)`.
    Free-detection is provider-specific (OpenRouter = price 0; HuggingFace = curated list; etc.).
 4. Register it in `AdapterRegistry` keyed by the provider `key`.
-5. Add a provider catalog seed row in `packages/db` (provider only — never seed models).
+5. Add a provider catalog seed row in `apps/server/src/database` (provider only — never seed models).
 6. Tests (Vitest, mocked HTTP): `validateKey`, `fetchModels` shape, `classifyFreeModels` correctness.
 7. Do **not** modify the router, gateway, or other adapters.
 
@@ -46,9 +46,9 @@ See [`../implementation/phase-5-routing.md`](../implementation/phase-5-routing.m
 
 ## Procedure: Add a Drizzle Entity + Migration
 
-1. Define the table in `packages/db/src/schema/<entity>.ts` authored ONCE via `getActiveDialect()`
+1. Define the table in `apps/server/src/database/schema/<entity>.ts` authored ONCE via `getActiveProvider()`
    (`table`/`columnKit`/`index`) so `DB_TABLE_PREFIX` + `DB_SCHEMA` apply and one definition serves
-   every dialect. Never hand-write a bare name or raw `sqlite-core`/`pg-core` builders. See the
+   every provider. Never hand-write a bare name or raw `sqlite-core`/`pg-core` builders. See the
    **database-changes** skill for the full entity recipe.
 2. Export it from the schema barrel and add any relations.
 3. Run `pnpm db:generate` to produce a migration; never edit a committed migration.

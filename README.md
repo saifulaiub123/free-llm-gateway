@@ -15,7 +15,7 @@ metric-driven fallback chain — exhausting free capacity before touching paid m
 
 ## Prerequisites
 
-- **Node.js 22 LTS** (see [`.nvmrc`](./.nvmrc) — run `nvm use`). Native modules (`better-sqlite3`) ship prebuilds for LTS lines.
+- **Node.js 22 LTS** (see [`.nvmrc`](./.nvmrc) — run `nvm use`). Native modules (`@libsql/client`) ship prebuilds for LTS lines.
 - **pnpm 9** (`corepack enable`).
 - **Docker** (optional, for the container quick start).
 
@@ -29,7 +29,7 @@ docker compose up --build     # gateway on http://localhost:5001
 With PostgreSQL instead of SQLite:
 
 ```bash
-# set DB_DRIVER=postgres and DB_URL in .env, then:
+# set DB_PROVIDER=postgres and DB_URL in .env, then:
 docker compose --profile postgres up --build
 ```
 

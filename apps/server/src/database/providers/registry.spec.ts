@@ -29,7 +29,7 @@ describe('provider registry', () => {
     for (const provider of providers) {
       expect(providerRegistry[provider].id).toBe(provider);
       expect(typeof providerRegistry[provider].table).toBe('function');
-      expect(typeof providerRegistry[provider].createDrizzle).toBe('function');
+      expect(typeof providerRegistry[provider].connect).toBe('function');
     }
     // The registry has exactly the supported providers — no missing/extra entries.
     expect(Object.keys(providerRegistry).sort()).toEqual([...providers].sort());

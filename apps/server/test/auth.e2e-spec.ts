@@ -4,10 +4,9 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { sql } from 'drizzle-orm';
 import request from 'supertest';
-import type { Db } from '../src/database/index.js';
 import { AppModule } from '../src/app.module.js';
 import { applyGlobalConfig } from '../src/app.setup.js';
-import { DB } from '../src/database/database.module.js';
+import { DatabaseService } from '../src/database/index.js';
 
 // DDL for the identity tables (mirrors migrations/sqlite/0000_*), applied to the app's :memory: db.
 const USERS_DDL = `CREATE TABLE users (
@@ -31,7 +30,7 @@ async function bootstrapApp(): Promise<INestApplication> {
   const app = moduleRef.createNestApplication();
   applyGlobalConfig(app);
   await app.init();
-  const db = app.get<Db>(DB);
+  const db = app.get(DatabaseService).db;
   await db.run(sql.raw(USERS_DDL));
   await db.run(sql.raw(REFRESH_DDL));
   return app;

@@ -18,9 +18,9 @@ Before finishing, grep the plan for the old value and confirm no stale reference
 |---|---|---|
 | **Provider** | TASK-018 seed list, TASK-023 adapter list, DEP-009, FILE-004 | phase-2 seed row, phase-2 TASK-023 adapter list + example, phase-2 AdapterRegistry, phase-2 tests |
 | **Routing strategy** | REQ-009/011, TASK-042/043, PAT-001, FILE-011 | phase-5 strategy class, RoutingStrategyFactory, tests |
-| **Drizzle entity** | matching TASK row, FILE-002 schema list, GUD-009/010 (base cols + FK/index) | owning phase guide schema (author via `getActiveDialect()` `table`/`columnKit`/`index`, compose base columns + `auditTableExtras`) + repository + tests |
+| **Drizzle entity** | matching TASK row, FILE-002 schema list, GUD-009/010 (base cols + FK/index) | owning phase guide schema (author via `getActiveProvider()` `table`/`columnKit`/`index`, compose base columns + `auditTableExtras`) + repository + tests |
 | **Base columns / repository** | PAT-003/007/008, GUD-009/010, TASK-066/067, FILE-002, FILE-005 | `schema/columns.ts` kit factories (`makeBaseColumns`/`makeBaseEntityColumns`) + phase-1 examples + `database-changes` skill |
-| **Database dialect** | CON-001, DEP-003, TASK-003 `DB_DRIVER` enum, GUD-008/011, PAT-006/009, FILE-002, TASK-068–071 | new `src/dialects/<name>/` folder (table/column-kit/audit/connection/migrate/config/index) + one `dialectRegistry` line + `migrations/<name>/` + phase-0.5 guide + `database-changes` skill (no SQL Server — Drizzle has no mssql core) |
+| **Database provider** | CON-001, DEP-003, TASK-003 `DB_PROVIDER` enum, GUD-008/011, PAT-006/009, FILE-002, TASK-068–071 | new `apps/server/src/database/providers/<name>/` folder (table/column-kit/audit/connection/migrate/index) + one `providerRegistry` line + `src/database/migrations/<name>/` + phase-0.5 guide + `database-changes` skill (no SQL Server — Drizzle has no mssql core) |
 | **Endpoint** | matching TASK row, REQ row, TEST row | owning phase guide controller + Swagger + tests |
 | **Env var** | TASK-003 env schema | phase-0 config + `.env.example` (TASK-008) |
 
@@ -85,10 +85,11 @@ Before finishing, grep the plan for the old value and confirm no stale reference
 
 ## Database Rules
 
-- All tables are declared via the **table factory** in `packages/db` so the configurable
-  `DB_TABLE_PREFIX` and `DB_SCHEMA` are applied consistently. Never hand-write a bare table name.
-- Code must run identically on PostgreSQL and SQLite. Avoid driver-specific SQL; when unavoidable,
-  branch on `DB_DRIVER` and cover both in tests.
+- All tables are declared via the active provider's **table creator** in `apps/server/src/database`
+  so the configurable `DB_TABLE_PREFIX` and `DB_SCHEMA` are applied consistently. Never hand-write a
+  bare table name.
+- Code must run identically on PostgreSQL and SQLite (both async). Avoid driver-specific SQL; when
+  unavoidable, branch on `DB_PROVIDER` and cover both in tests.
 - Schema changes require a Drizzle migration. Never edit a committed migration; add a new one.
 
 ---

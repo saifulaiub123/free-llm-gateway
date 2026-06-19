@@ -17,7 +17,7 @@ packages/
 ## Key principles
 
 - **Dependency direction:** `controller → service → repository → db`. One-way; no DB access in controllers.
-- **Open/Closed:** new provider = adapter subclass + registry entry + seed row; new routing strategy = strategy class + factory entry; new DB dialect = table-factory registry entry. Core untouched.
+- **Open/Closed:** new provider = adapter subclass + registry entry + seed row; new routing strategy = strategy class + factory entry; new DB provider = `providers/` folder + `providerRegistry` entry. Core untouched.
 - **Two auth surfaces:** JWT guards `/api/v1`; hashed `sqr-llm-` tokens guard `/v1`. Never merged.
 
 ## Topics (to be documented)

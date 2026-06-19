@@ -1,14 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
-import { refreshTokens, type Db } from '../../database/index.js';
-import { DB } from '../../database/database.module.js';
+import { refreshTokens, DatabaseService } from '../../database/index.js';
 import { BaseRepository } from '../../common/db/base.repository.js';
 
 /** Persistence for hashed `refresh_tokens` (lookup by hash, single + family revocation). */
 @Injectable()
 export class RefreshTokenRepository extends BaseRepository<typeof refreshTokens> {
-  constructor(@Inject(DB) db: Db) {
-    super(db, refreshTokens, false); // baseColumns only -> not soft-deletable
+  constructor(database: DatabaseService) {
+    super(database, refreshTokens, false); // baseColumns only -> not soft-deletable
   }
 
   /** Finds a refresh token by its SHA-256 hash. */

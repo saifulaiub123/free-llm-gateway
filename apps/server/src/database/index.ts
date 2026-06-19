@@ -19,8 +19,10 @@ export type {
   ColumnKit,
 } from './providers/provider.contract.js';
 
-export { createDb } from './connection.js';
-export type { Db, Schema } from './types.js';
+export { createDb, connectDb } from './connection.js';
+export type { Db, Schema, DbConnection } from './types.js';
+
+export { DatabaseService } from './database.service.js';
 
 export { runMigrations } from './migrate.js';
 

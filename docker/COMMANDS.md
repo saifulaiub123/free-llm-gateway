@@ -26,7 +26,7 @@ docker compose up --build
 # Start in the background.
 docker compose up --build -d
 
-# With PostgreSQL instead of SQLite (set DB_DRIVER=postgres + DB_URL in .env first).
+# With PostgreSQL instead of SQLite (set DB_PROVIDER=postgres + DB_URL in .env first).
 docker compose --profile postgres up --build -d
 
 # Tail logs.

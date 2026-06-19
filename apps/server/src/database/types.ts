@@ -15,3 +15,15 @@ export type Schema = typeof schema;
  * so it can be referenced from the dialect contract without creating an import cycle.
  */
 export type Db = LibSQLDatabase<Schema>;
+
+/**
+ * An open database connection: the Drizzle client plus a `disconnect` that closes the underlying
+ * driver handle (libSQL client / pg pool). A provider's `connect` returns this so {@link Db} consumers
+ * stay driver-agnostic while the app can still shut the connection down gracefully.
+ */
+export interface DbConnection {
+  /** The driver-agnostic Drizzle client. */
+  readonly db: Db;
+  /** Closes the underlying driver connection. */
+  disconnect(): Promise<void>;
+}
