@@ -12,13 +12,13 @@ import { runMigrations } from './migrate.js';
  * the runner wiring independently of any specific entity.
  */
 describe('runMigrations (sqlite)', () => {
-  const originalDriver = process.env.DB_DRIVER;
+  const originalProvider = process.env.DB_PROVIDER;
   const originalUrl = process.env.DB_URL;
   let root: string | undefined;
 
   afterEach(() => {
-    if (originalDriver === undefined) delete process.env.DB_DRIVER;
-    else process.env.DB_DRIVER = originalDriver;
+    if (originalProvider === undefined) delete process.env.DB_PROVIDER;
+    else process.env.DB_PROVIDER = originalProvider;
     if (originalUrl === undefined) delete process.env.DB_URL;
     else process.env.DB_URL = originalUrl;
     // libSQL can keep the SQLite file open on Windows even after close(), so cleanup is best-effort:
@@ -34,7 +34,7 @@ describe('runMigrations (sqlite)', () => {
   });
 
   it('applies a migration and creates the table', async () => {
-    process.env.DB_DRIVER = 'sqlite';
+    process.env.DB_PROVIDER = 'sqlite';
     root = mkdtempSync(join(tmpdir(), 'lg-mig-'));
     const dbPath = join(root, 'test.db');
     process.env.DB_URL = `file:${dbPath}`;

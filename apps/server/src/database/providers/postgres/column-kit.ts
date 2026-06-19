@@ -1,5 +1,5 @@
 import { boolean, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
-import type { ColumnKit } from '../dialect.contract.js';
+import type { ColumnKit } from '../provider.contract.js';
 
 /**
  * Real `pg-core` builders cast to the canonical (SQLite-typed) {@link ColumnKit}. The runtime objects

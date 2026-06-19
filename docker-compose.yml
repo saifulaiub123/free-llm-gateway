@@ -1,6 +1,6 @@
 # Free LLM Gateway — local container stack.
 # Quick start:  cp .env.example .env  &&  docker compose up --build
-# With Postgres: docker compose --profile postgres up --build   (and set DB_DRIVER=postgres)
+# With Postgres: docker compose --profile postgres up --build   (and set DB_PROVIDER=postgres)
 
 services:
   gateway:
@@ -14,7 +14,7 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      DB_DRIVER: ${DB_DRIVER:-sqlite}
+      DB_PROVIDER: ${DB_PROVIDER:-sqlite}
       DB_URL: ${DB_URL:-file:./data/llm-gateway.db}
       DB_SCHEMA: ${DB_SCHEMA:-public}
       DB_TABLE_PREFIX: ${DB_TABLE_PREFIX:-}

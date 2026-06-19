@@ -1,8 +1,8 @@
-import { getActiveDialect } from '../dialects/registry.js';
+import { getActiveProvider } from '../providers/registry.js';
 import { baseEntityColumns } from './columns.js';
 import { auditTableExtras } from './audit.js';
 
-const { table, columnKit } = getActiveDialect();
+const { table, columnKit } = getActiveProvider();
 
 /**
  * Application user.

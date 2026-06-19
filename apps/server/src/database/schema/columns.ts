@@ -1,5 +1,5 @@
-import { getActiveDialect } from '../dialects/registry.js';
-import type { ColumnKit } from '../dialects/dialect.contract.js';
+import { getActiveProvider } from '../providers/registry.js';
+import type { ColumnKit } from '../providers/provider.contract.js';
 
 /**
  * Columns present on EVERY table: surrogate key + creation timestamp. Built from a dialect's
@@ -30,7 +30,7 @@ export const makeBaseEntityColumns = (kit: ColumnKit) => ({
 });
 
 // Active-dialect instances every entity spreads (`...baseColumns` / `...baseEntityColumns`).
-const kit = getActiveDialect().columnKit;
+const kit = getActiveProvider().columnKit;
 
 /** `id` + `createdAt`, for ALL tables. */
 export const baseColumns = makeBaseColumns(kit);

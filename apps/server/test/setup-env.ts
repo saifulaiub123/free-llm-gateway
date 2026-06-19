@@ -8,5 +8,5 @@
 process.env.ENCRYPTION_KEY ??= 'a'.repeat(64);
 process.env.JWT_ACCESS_SECRET ??= 's'.repeat(32);
 process.env.JWT_REFRESH_SECRET ??= 'r'.repeat(32);
-process.env.DB_DRIVER ??= 'sqlite';
+process.env.DB_PROVIDER ??= 'sqlite';
 process.env.DB_URL ??= ':memory:';

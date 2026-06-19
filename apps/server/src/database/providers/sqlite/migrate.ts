@@ -4,9 +4,9 @@ import { drizzle as drizzleLibsql } from 'drizzle-orm/libsql';
 import { migrate as migrateLibsql } from 'drizzle-orm/libsql/migrator';
 import { ensureParentDir, resolveSqliteConnectionUrl, resolveSqliteFilePath } from './paths.js';
 
-/** Default committed migrations folder for SQLite (`packages/db/migrations/sqlite`). */
+/** Default committed migrations folder for SQLite (`src/database/migrations/sqlite`). */
 const defaultMigrationsFolder = (): string =>
-  fileURLToPath(new URL('../../../migrations/sqlite', import.meta.url));
+  fileURLToPath(new URL('../../migrations/sqlite', import.meta.url));
 
 /**
  * Applies SQLite migrations against the configured libSQL database. SQLite has no schemas, so there

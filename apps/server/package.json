@@ -8,10 +8,12 @@
     "start": "tsx src/main.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
+    "db:migrate": "tsx src/database/migrate.ts"
   },
   "dependencies": {
-    "@gateway/db": "workspace:*",
+    "@libsql/client": "^0.17.4",
     "@nestjs/common": "^10.4.0",
     "@nestjs/config": "^3.2.0",
     "@nestjs/core": "^10.4.0",
@@ -26,6 +28,7 @@
     "drizzle-orm": "^0.33.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pg": "^8.12.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.0",
     "tsx": "^4.19.0",
@@ -37,7 +40,9 @@
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",
     "@types/passport-jwt": "^4.0.1",
+    "@types/pg": "^8.11.10",
     "@types/supertest": "^6.0.0",
+    "drizzle-kit": "^0.24.0",
     "supertest": "^7.0.0",
     "unplugin-swc": "^1.5.0",
     "vitest": "^2.0.0"

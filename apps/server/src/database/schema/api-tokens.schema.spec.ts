@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
-import { apiTokens } from '@gateway/db';
+import { apiTokens } from '../index.js';
 
 // DDL mirroring migrations/sqlite/0001_* so the in-memory db has the api_tokens table.
 const API_TOKENS_DDL = `CREATE TABLE api_tokens (

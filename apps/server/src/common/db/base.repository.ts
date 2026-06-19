@@ -7,7 +7,7 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
-import type { Db } from '@gateway/db';
+import type { Db } from '../../database/index.js';
 
 /**
  * Generic data-mapper repository over a Drizzle table.
@@ -19,7 +19,7 @@ import type { Db } from '@gateway/db';
  * several writes in `db.transaction(tx => ...)` and passes `tx` to each call for atomicity.
  *
  * Methods are async (Promise-returning) and run against the canonical async client ({@link Db}); the
- * same body executes on libSQL (SQLite) and node-postgres alike — see the `Db` WHY in `@gateway/db`.
+ * same body executes on libSQL (SQLite) and node-postgres alike — see the `Db` WHY in `../../database`.
  */
 export abstract class BaseRepository<TTable extends SQLiteTable> {
   /**

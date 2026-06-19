@@ -1,5 +1,5 @@
 import { pgTableCreator } from 'drizzle-orm/pg-core';
-import type { TableCreator } from '../dialect.contract.js';
+import type { TableCreator } from '../provider.contract.js';
 import { tablePrefix } from '../../common/env.js';
 
 /**

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
-import { refreshTokens, type Db } from '@gateway/db';
+import { refreshTokens, type Db } from '../../database/index.js';
 import { DB } from '../../database/database.module.js';
 import { BaseRepository } from '../../common/db/base.repository.js';
 

@@ -1,9 +1,9 @@
-import { getActiveDialect } from '../dialects/registry.js';
+import { getActiveProvider } from '../providers/registry.js';
 import { baseEntityColumns } from './columns.js';
 import { auditTableExtras } from './audit.js';
 import { users } from './users.js';
 
-const { table, columnKit, index } = getActiveDialect();
+const { table, columnKit, index } = getActiveProvider();
 
 /**
  * Unified LLM API tokens used by external clients (e.g. ScraperQ) on the `/v1` gateway.

@@ -3,7 +3,7 @@ import { getTableColumns, getTableName, sql } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { text } from 'drizzle-orm/sqlite-core';
-import { sqliteTable } from '../dialects/sqlite/table.js';
+import { sqliteTable } from '../providers/sqlite/table.js';
 import { baseColumns, baseEntityColumns } from './columns.js';
 
 // Two tables share the base sets — this also proves the spread yields independent columns per table.

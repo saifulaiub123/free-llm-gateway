@@ -4,7 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { sql } from 'drizzle-orm';
 import request from 'supertest';
-import type { Db } from '@gateway/db';
+import type { Db } from '../src/database/index.js';
 import { AppModule } from '../src/app.module.js';
 import { applyGlobalConfig } from '../src/app.setup.js';
 import { DB } from '../src/database/database.module.js';

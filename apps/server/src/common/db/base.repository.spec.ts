@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { baseEntityColumns, createDb, type Db } from '@gateway/db';
+import { baseEntityColumns, createDb, type Db } from '../../database/index.js';
 import { BaseRepository } from './base.repository.js';
 
 // Throwaway entity for exercising the generic repository (composes the shared audit columns).

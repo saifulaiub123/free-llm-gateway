@@ -1,8 +1,8 @@
-import { getActiveDialect } from '../dialects/registry.js';
+import { getActiveProvider } from '../providers/registry.js';
 import { baseColumns } from './columns.js';
 import { users } from './users.js';
 
-const { table, columnKit, index } = getActiveDialect();
+const { table, columnKit, index } = getActiveProvider();
 
 /**
  * Persisted refresh tokens (hashed) backing JWT session rotation.

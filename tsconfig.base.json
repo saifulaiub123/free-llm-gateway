@@ -17,7 +17,6 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "@gateway/db": ["./packages/db/src/index.ts"],
       "@gateway/shared-types": ["./packages/shared-types/src/index.ts"],
       "@gateway/provider-adapters": ["./packages/provider-adapters/src/index.ts"]
     }

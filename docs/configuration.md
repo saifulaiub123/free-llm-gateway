@@ -18,7 +18,7 @@ The server is configured entirely through environment variables, validated at bo
 | `PORT` | `5001` | HTTP port. |
 | `JWT_ACCESS_TTL` | `15m` | Access-token lifetime. |
 | `JWT_REFRESH_TTL` | `30d` | Refresh-token lifetime. |
-| `DB_DRIVER` | `sqlite` | `sqlite` or `postgres`. |
+| `DB_PROVIDER` | `sqlite` | `sqlite` or `postgres`. |
 | `DB_URL` | `file:./data/llm-gateway.db` | SQLite path or `postgres://` connection string. |
 | `DB_SCHEMA` | `public` | PostgreSQL schema (ignored on SQLite). |
 | `DB_TABLE_PREFIX` | _(empty)_ | Prepended to every table name (e.g. `lg_`). |
@@ -28,4 +28,4 @@ The server is configured entirely through environment variables, validated at bo
 ## Database
 
 The gateway runs identically on SQLite (zero-config dev) and PostgreSQL (production). Switch with
-`DB_DRIVER` + `DB_URL`. Generate and apply migrations with `pnpm db:generate` / `pnpm db:migrate`.
+`DB_PROVIDER` + `DB_URL`. Generate and apply migrations with `pnpm db:generate` / `pnpm db:migrate`.

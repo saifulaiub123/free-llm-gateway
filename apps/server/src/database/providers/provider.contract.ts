@@ -6,11 +6,11 @@ import type { Db, Schema } from '../types.js';
  * Relational databases the gateway supports.
  *
  * WHY a single union: this is the one place that enumerates "which databases work". Adding a dialect
- * (e.g. `'mysql'`) starts here, then a `dialects/<name>/` folder implements the {@link DialectModule}
+ * (e.g. `'mysql'`) starts here, then a `providers/<name>/` folder implements the {@link ProviderModule}
  * and one `dialectRegistry` line registers it. NOTE: Drizzle ships dialect cores for PostgreSQL,
  * MySQL/MariaDB, and SQLite only — there is no SQL Server core, so SQL Server cannot be added.
  */
-export type SupportedDialect = 'sqlite' | 'postgres';
+export type SupportedProvider = 'sqlite' | 'postgres';
 
 /**
  * Semantic column primitives every dialect provides. Return types are the **canonical** (SQLite)
@@ -32,9 +32,9 @@ export type IndexFn = typeof import('drizzle-orm/sqlite-core').index;
  * everything driver-specific behind this contract so common code (schema, connection, migrate)
  * never branches on the driver inline (GUD-011).
  */
-export interface DialectModule {
+export interface ProviderModule {
   /** The dialect this module implements. */
-  readonly id: SupportedDialect;
+  readonly id: SupportedProvider;
   /** Prefix-applying table creator. */
   readonly table: TableCreator;
   /** Semantic column primitives used to author entities once. */

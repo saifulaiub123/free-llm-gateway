@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { getActiveDialect } from './dialects/registry.js';
+import { getActiveProvider } from './providers/registry.js';
 
 /**
  * Applies all pending migrations for the configured dialect.
@@ -9,7 +9,7 @@ import { getActiveDialect } from './dialects/registry.js';
  * `CREATE SCHEMA IF NOT EXISTS` pre-step. `migrationsFolder` can be overridden for tests.
  */
 export const runMigrations = (migrationsFolder?: string): Promise<void> =>
-  getActiveDialect().runMigrator(migrationsFolder);
+  getActiveProvider().runMigrator(migrationsFolder);
 
 // When executed directly (`pnpm db:migrate`), run migrations and surface failures as a non-zero exit.
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

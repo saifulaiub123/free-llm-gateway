@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
-import { refreshTokens, users } from '@gateway/db';
+import { refreshTokens, users } from '../index.js';
 
 // DDL mirroring migrations/sqlite/0000_* so the in-memory db has the Phase 1 identity tables.
 const USERS_DDL = `CREATE TABLE users (

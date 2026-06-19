@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
-import { users, type Db } from '@gateway/db';
+import { users, type Db } from '../../database/index.js';
 import { DB } from '../../database/database.module.js';
 import { BaseRepository } from '../../common/db/base.repository.js';
 

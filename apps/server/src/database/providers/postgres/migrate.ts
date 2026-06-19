@@ -5,9 +5,9 @@ import { Pool } from 'pg';
 import { dbSchema } from '../../common/env.js';
 import { resolvePostgresUrl } from './paths.js';
 
-/** Default committed migrations folder for PostgreSQL (`packages/db/migrations/postgres`). */
+/** Default committed migrations folder for PostgreSQL (`src/database/migrations/postgres`). */
 const defaultMigrationsFolder = (): string =>
-  fileURLToPath(new URL('../../../migrations/postgres', import.meta.url));
+  fileURLToPath(new URL('../../migrations/postgres', import.meta.url));
 
 /**
  * Applies PostgreSQL migrations. Ensures the configured schema exists first so prefixed tables land
