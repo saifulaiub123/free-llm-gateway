@@ -1,9 +1,8 @@
 /**
  * Schema barrel for `@gateway/db`.
  *
- * Drizzle entities are added starting in Phase 1 (`users`, `refresh_tokens`,
- * `api_tokens`, `providers`, ...). It is intentionally empty for now so the
- * connection factory can type its Drizzle client against the (currently empty)
- * schema without a circular dependency.
+ * Entities are authored ONCE via the active dialect's `ColumnKit` (PAT-009) and aggregated here so
+ * the connection factory can type its Drizzle client against them. More entities are added per phase.
  */
-export {};
+export { users } from './users.js';
+export { refreshTokens } from './refresh-tokens.js';

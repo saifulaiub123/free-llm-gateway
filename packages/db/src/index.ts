@@ -33,3 +33,6 @@ export {
 
 export { auditTableExtras } from './schema/audit.js';
 export type { AuditExtras, AuditOwnershipColumns } from './schema/audit.js';
+
+// Schema entities (authored once via the active dialect's ColumnKit). Grows per phase.
+export * from './schema/index.js';

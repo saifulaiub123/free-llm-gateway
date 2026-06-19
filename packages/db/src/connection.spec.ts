@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { createDb } from './connection.js';
+import type { DbExecutor } from './types.js';
 
 /**
  * Verifies the connection factory builds a working Drizzle client for the
@@ -24,7 +24,7 @@ describe('connection factory', () => {
     process.env.DB_URL = ':memory:';
 
     // DB_DRIVER pins the dialect, so the handle is the SQLite variant here.
-    const db = createDb() as BetterSQLite3Database;
+    const db = createDb() as DbExecutor;
     const rows = db.all(sql`select 1 as one`) as Array<{ one: number }>;
 
     expect(rows).toEqual([{ one: 1 }]);
@@ -34,7 +34,7 @@ describe('connection factory', () => {
     delete process.env.DB_DRIVER;
     process.env.DB_URL = ':memory:';
 
-    const db = createDb() as BetterSQLite3Database;
+    const db = createDb() as DbExecutor;
     const rows = db.all(sql`select 42 as answer`) as Array<{ answer: number }>;
 
     expect(rows).toEqual([{ answer: 42 }]);

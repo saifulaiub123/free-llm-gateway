@@ -67,7 +67,9 @@ with the plan. **Always obey `AGENTS.md` and the `plan-consistency` instruction 
    }));
    ```
 2. Export it from the schema barrel (`packages/db/src/schema/index.ts`) and add relations if needed.
-3. Generate the migration: `pnpm db:generate` (writes to `migrations/<driver>/`). Never edit it after commit.
+3. Generate the migration: `pnpm db:generate` (writes to `migrations/<driver>/`; the script runs
+   drizzle-kit under `tsx` because the schema imports the dialect registry via NodeNext `.js`, which
+   drizzle-kit's own loader can't resolve). Never edit it after commit.
 4. If the column types differ per dialect, author the Postgres variant and derive the SQLite variant
    from a shared column spec (`packages/db/src/columns.ts`) — keep two variants ONLY where required.
 5. Add the repository in the owning server module (`controller → service → repository → db`) by

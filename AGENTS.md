@@ -175,7 +175,7 @@ pnpm --filter server test    # server unit + integration tests
 pnpm --filter @gateway/provider-adapters test
 pnpm lint                    # ESLint (max-lines / complexity enforced)
 pnpm typecheck               # tsc --noEmit, strict
-pnpm db:generate             # generate Drizzle migration from schema
+pnpm db:generate             # generate Drizzle migration (runs drizzle-kit under tsx for NodeNext .js)
 pnpm db:migrate              # apply migrations
 ```
 

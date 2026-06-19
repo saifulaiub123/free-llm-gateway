@@ -247,7 +247,7 @@ Add/extend specs (Vitest), mirroring the existing dialect specs:
 
 ```bash
 pnpm --filter @gateway/db test && pnpm --filter @gateway/db typecheck && pnpm --filter @gateway/db lint
-DB_DRIVER=mysql pnpm --filter @gateway/db db:generate   # emits engine DDL (manual check)
+DB_DRIVER=mysql pnpm --filter @gateway/db db:generate   # emits engine DDL (manual; db:generate runs under tsx)
 pnpm --filter server test                                # createDb() still works
 ```
 
