@@ -1,18 +1,18 @@
-import Database from 'better-sqlite3';
-import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
+import { createClient } from '@libsql/client';
+import { drizzle as drizzleLibsql } from 'drizzle-orm/libsql';
 import type { Db, Schema } from '../../types.js';
-import { ensureParentDir, resolveSqliteFilePath } from './paths.js';
+import { ensureParentDir, resolveSqliteConnectionUrl, resolveSqliteFilePath } from './paths.js';
 
 /**
- * Builds a SQLite-backed Drizzle client at the configured file path (or `:memory:`).
+ * Builds a libSQL-backed Drizzle client at the configured URL (a file path or `:memory:`).
  *
- * WHY `schema` is a parameter: the common connection factory imports the schema barrel and passes it
- * in, so this dialect module never imports `schema/` itself (which would create an import cycle:
- * schema → registry → dialect → schema).
+ * WHY libSQL (async) instead of better-sqlite3 (sync): both supported drivers now share one
+ * asynchronous query API, so a single repository body runs on SQLite and PostgreSQL alike. `schema`
+ * is passed in by the common connection factory so this module never imports `schema/` itself (which
+ * would create an import cycle: schema → registry → dialect → schema).
  */
 export const createSqliteDrizzle = (schema: Schema): Db => {
-  const filePath = resolveSqliteFilePath();
-  ensureParentDir(filePath); // create ./data (or any configured dir) so opening never fails
-  const sqlite = new Database(filePath);
-  return drizzleSqlite(sqlite, { schema });
+  ensureParentDir(resolveSqliteFilePath()); // create ./data (or any configured dir) so opening never fails
+  const client = createClient({ url: resolveSqliteConnectionUrl() });
+  return drizzleLibsql(client, { schema });
 };

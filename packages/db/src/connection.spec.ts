@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { createDb } from './connection.js';
-import type { DbExecutor } from './types.js';
 
 /**
  * Verifies the connection factory builds a working Drizzle client for the
@@ -19,23 +18,23 @@ describe('connection factory', () => {
     else process.env.DB_URL = originalUrl;
   });
 
-  it('connects with an in-memory SQLite database and runs select 1', () => {
+  it('connects with an in-memory SQLite database and runs select 1', async () => {
     process.env.DB_DRIVER = 'sqlite';
     process.env.DB_URL = ':memory:';
 
-    // DB_DRIVER pins the dialect, so the handle is the SQLite variant here.
-    const db = createDb() as DbExecutor;
-    const rows = db.all(sql`select 1 as one`) as Array<{ one: number }>;
+    // DB_DRIVER pins the dialect, so the handle is the libSQL (SQLite) client here.
+    const db = createDb();
+    const rows = (await db.all(sql`select 1 as one`)) as Array<{ one: number }>;
 
     expect(rows).toEqual([{ one: 1 }]);
   });
 
-  it('defaults to SQLite when DB_DRIVER is unset', () => {
+  it('defaults to SQLite when DB_DRIVER is unset', async () => {
     delete process.env.DB_DRIVER;
     process.env.DB_URL = ':memory:';
 
-    const db = createDb() as DbExecutor;
-    const rows = db.all(sql`select 42 as answer`) as Array<{ answer: number }>;
+    const db = createDb();
+    const rows = (await db.all(sql`select 42 as answer`)) as Array<{ answer: number }>;
 
     expect(rows).toEqual([{ answer: 42 }]);
   });

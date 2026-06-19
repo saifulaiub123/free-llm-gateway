@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
 import { refreshTokens, users } from '@gateway/db';
 
 // DDL mirroring migrations/sqlite/0000_* so the in-memory db has the Phase 1 identity tables.
@@ -32,11 +32,11 @@ const REFRESH_TOKENS_DDL = `CREATE TABLE refresh_tokens (
 )`;
 
 /** A fresh in-memory db with the Phase 1 identity tables, for schema round-trip checks. */
-function freshDb(): ReturnType<typeof drizzle> {
-  const sqlite = new Database(':memory:');
-  sqlite.exec(USERS_DDL);
-  sqlite.exec(REFRESH_TOKENS_DDL);
-  return drizzle(sqlite);
+async function freshDb(): Promise<ReturnType<typeof drizzle>> {
+  const client = createClient({ url: ':memory:' });
+  await client.execute(USERS_DDL);
+  await client.execute(REFRESH_TOKENS_DDL);
+  return drizzle(client);
 }
 
 /**
@@ -44,45 +44,43 @@ function freshDb(): ReturnType<typeof drizzle> {
  * apply, since every auth flow (TASK-012+) builds on these two tables (TASK-010).
  */
 describe('users + refresh_tokens schema (TASK-010)', () => {
-  it('round-trips a user and a refresh token with defaults applied', () => {
-    const db = freshDb();
-    const inserted = db
+  it('round-trips a user and a refresh token with defaults applied', async () => {
+    const db = await freshDb();
+    const inserted = await db
       .insert(users)
       .values({ email: 'alice@example.com', passwordHash: 'hash' })
-      .returning()
-      .all();
+      .returning();
     const user = inserted[0];
     expect(user?.role).toBe('user'); // column default
     expect(user?.isActive).toBe(true);
     expect(user?.isDeleted).toBe(false);
 
-    db.insert(refreshTokens)
-      .values({
-        userId: user!.id,
-        tokenHash: 'token-hash',
-        familyId: 'family-1',
-        expiresAt: new Date(Date.now() + 3_600_000),
-      })
-      .run();
+    await db.insert(refreshTokens).values({
+      userId: user!.id,
+      tokenHash: 'token-hash',
+      familyId: 'family-1',
+      expiresAt: new Date(Date.now() + 3_600_000),
+    });
 
-    const found = db.select().from(users).where(eq(users.email, 'alice@example.com')).get();
+    const found = (
+      await db.select().from(users).where(eq(users.email, 'alice@example.com')).limit(1)
+    )[0];
     expect(found?.passwordHash).toBe('hash');
 
-    const tokens = db
+    const tokens = await db
       .select()
       .from(refreshTokens)
-      .where(eq(refreshTokens.userId, user!.id))
-      .all();
+      .where(eq(refreshTokens.userId, user!.id));
     expect(tokens).toHaveLength(1);
     expect(tokens[0]?.familyId).toBe('family-1');
     expect(tokens[0]?.expiresAt).toBeInstanceOf(Date);
   });
 
-  it('enforces the unique email constraint', () => {
-    const db = freshDb();
-    db.insert(users).values({ email: 'dup@example.com', passwordHash: 'h1' }).run();
-    expect(() =>
-      db.insert(users).values({ email: 'dup@example.com', passwordHash: 'h2' }).run(),
-    ).toThrow();
+  it('enforces the unique email constraint', async () => {
+    const db = await freshDb();
+    await db.insert(users).values({ email: 'dup@example.com', passwordHash: 'h1' });
+    await expect(
+      db.insert(users).values({ email: 'dup@example.com', passwordHash: 'h2' }),
+    ).rejects.toThrow();
   });
 });

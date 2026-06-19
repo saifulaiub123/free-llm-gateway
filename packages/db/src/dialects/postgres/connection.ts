@@ -11,5 +11,7 @@ export const createPostgresDrizzle = (schema: Schema): Db => {
   const connectionString = resolvePostgresUrl();
   // exactOptionalPropertyTypes: only pass connectionString when defined/non-empty.
   const pool = connectionString ? new Pool({ connectionString }) : new Pool();
-  return drizzlePg(pool, { schema });
+  // Cast to the canonical libSQL-typed `Db`: node-postgres shares the same async query-builder
+  // surface the repositories use, so the substitution is runtime-sound (PAT-009).
+  return drizzlePg(pool, { schema }) as unknown as Db;
 };

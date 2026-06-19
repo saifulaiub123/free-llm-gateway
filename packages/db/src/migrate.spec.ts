@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 import { runMigrations } from './migrate.js';
 
 /**
@@ -21,7 +21,15 @@ describe('runMigrations (sqlite)', () => {
     else process.env.DB_DRIVER = originalDriver;
     if (originalUrl === undefined) delete process.env.DB_URL;
     else process.env.DB_URL = originalUrl;
-    if (root) rmSync(root, { recursive: true, force: true });
+    // libSQL can keep the SQLite file open on Windows even after close(), so cleanup is best-effort:
+    // a locked temp file must not fail the test (the OS reclaims the temp dir regardless).
+    if (root) {
+      try {
+        rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      } catch {
+        /* ignore EBUSY: the file handle is released when the process exits */
+      }
+    }
     root = undefined;
   });
 
@@ -49,16 +57,17 @@ describe('runMigrations (sqlite)', () => {
 
     await runMigrations(migrationsDir);
 
-    const sqlite = new Database(dbPath);
-    const table = sqlite
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'widgets'")
-      .get();
-    const tracking = sqlite
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = '__drizzle_migrations'")
-      .get();
-    sqlite.close();
+    // Re-open the migrated file with a libSQL client and assert the tables now exist.
+    const client = createClient({ url: `file:${dbPath}` });
+    const table = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'widgets'",
+    );
+    const tracking = await client.execute(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = '__drizzle_migrations'",
+    );
+    client.close();
 
-    expect(table).toEqual({ name: 'widgets' });
-    expect(tracking).toEqual({ name: '__drizzle_migrations' });
+    expect(table.rows[0]?.name).toBe('widgets');
+    expect(tracking.rows[0]?.name).toBe('__drizzle_migrations');
   });
 });

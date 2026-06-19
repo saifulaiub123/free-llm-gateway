@@ -20,7 +20,7 @@ export type {
 } from './dialects/dialect.contract.js';
 
 export { createDb } from './connection.js';
-export type { Db, Schema, DbExecutor } from './types.js';
+export type { Db, Schema } from './types.js';
 
 export { runMigrations } from './migrate.js';
 

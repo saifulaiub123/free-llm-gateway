@@ -4,7 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { sql } from 'drizzle-orm';
 import request from 'supertest';
-import type { DbExecutor } from '@gateway/db';
+import type { Db } from '@gateway/db';
 import { AppModule } from '../src/app.module.js';
 import { applyGlobalConfig } from '../src/app.setup.js';
 import { DB } from '../src/database/database.module.js';
@@ -31,9 +31,9 @@ async function bootstrapApp(): Promise<INestApplication> {
   const app = moduleRef.createNestApplication();
   applyGlobalConfig(app);
   await app.init();
-  const db = app.get<DbExecutor>(DB);
-  db.run(sql.raw(USERS_DDL));
-  db.run(sql.raw(REFRESH_DDL));
+  const db = app.get<Db>(DB);
+  await db.run(sql.raw(USERS_DDL));
+  await db.run(sql.raw(REFRESH_DDL));
   return app;
 }
 

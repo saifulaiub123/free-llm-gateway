@@ -13,10 +13,11 @@ export class UsersRepository extends BaseRepository<typeof users> {
 
   /** Finds an active (non-deleted) user by email, or `undefined`. */
   async findByEmail(email: string): Promise<typeof users.$inferSelect | undefined> {
-    return this.exec()
+    const rows = await this.exec()
       .select()
       .from(users)
       .where(and(eq(users.email, email), eq(users.isDeleted, false)))
-      .get();
+      .limit(1);
+    return rows[0];
   }
 }

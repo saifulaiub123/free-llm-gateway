@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getTableColumns, getTableName, sql } from 'drizzle-orm';
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
 import { text } from 'drizzle-orm/sqlite-core';
 import { sqliteTable } from '../dialects/sqlite/table.js';
 import { baseColumns, baseEntityColumns } from './columns.js';
@@ -16,10 +16,10 @@ const entityWidgets = sqliteTable('entity_widgets', {
   name: text('name').notNull(),
 });
 
-/** Creates an in-memory SQLite db with the `entity_widgets` table for round-trip checks. */
-function createEntityDb(): { db: ReturnType<typeof drizzle>; close: () => void } {
-  const sqlite = new Database(':memory:');
-  sqlite.exec(`CREATE TABLE ${getTableName(entityWidgets)} (
+/** Creates an in-memory libSQL db with the `entity_widgets` table for round-trip checks. */
+async function createEntityDb(): Promise<{ db: ReturnType<typeof drizzle>; close: () => void }> {
+  const client = createClient({ url: ':memory:' });
+  await client.execute(`CREATE TABLE ${getTableName(entityWidgets)} (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at INTEGER NOT NULL DEFAULT (unixepoch()),
     created_by INTEGER,
@@ -29,7 +29,7 @@ function createEntityDb(): { db: ReturnType<typeof drizzle>; close: () => void }
     is_deleted INTEGER NOT NULL DEFAULT 0,
     name TEXT NOT NULL
   )`);
-  return { db: drizzle(sqlite), close: () => sqlite.close() };
+  return { db: drizzle(client), close: () => client.close() };
 }
 
 /**
@@ -65,10 +65,10 @@ describe('base column sets', () => {
     expect(getTableColumns(entityWidgets).id).toBeDefined();
   });
 
-  it('round-trips with defaults applied (createdAt set, isActive true, isDeleted false)', () => {
-    const { db, close } = createEntityDb();
-    db.insert(entityWidgets).values({ name: 'alpha' }).run();
-    const rows = db.select().from(entityWidgets).all();
+  it('round-trips with defaults applied (createdAt set, isActive true, isDeleted false)', async () => {
+    const { db, close } = await createEntityDb();
+    await db.insert(entityWidgets).values({ name: 'alpha' });
+    const rows = await db.select().from(entityWidgets);
     close();
 
     expect(rows).toHaveLength(1);
@@ -79,14 +79,13 @@ describe('base column sets', () => {
     expect(rows[0]?.modifiedAt).toBeNull();
   });
 
-  it('soft-deletes via the isDeleted column', () => {
-    const { db, close } = createEntityDb();
-    db.insert(entityWidgets).values({ name: 'beta', isDeleted: true }).run();
-    const active = db
+  it('soft-deletes via the isDeleted column', async () => {
+    const { db, close } = await createEntityDb();
+    await db.insert(entityWidgets).values({ name: 'beta', isDeleted: true });
+    const active = await db
       .select()
       .from(entityWidgets)
-      .where(sql`is_deleted = 0`)
-      .all();
+      .where(sql`is_deleted = 0`);
     close();
 
     expect(active).toHaveLength(0);

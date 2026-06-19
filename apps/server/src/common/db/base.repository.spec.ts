@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { baseEntityColumns, createDb, type Db, type DbExecutor } from '@gateway/db';
+import { baseEntityColumns, createDb, type Db } from '@gateway/db';
 import { BaseRepository } from './base.repository.js';
 
 // Throwaway entity for exercising the generic repository (composes the shared audit columns).
@@ -36,9 +36,9 @@ const CREATE_TABLE = sql`CREATE TABLE test_widgets (
 )`;
 
 /** A fresh in-memory SQLite db + the test table. `setup-env.ts` pins DB_DRIVER=sqlite, DB_URL=:memory:. */
-function freshDb(): Db {
+async function freshDb(): Promise<Db> {
   const db = createDb();
-  (db as unknown as DbExecutor).run(CREATE_TABLE);
+  await db.run(CREATE_TABLE);
   return db;
 }
 
@@ -49,8 +49,8 @@ function freshDb(): Db {
 describe('BaseRepository', () => {
   let repo: TestWidgetRepository;
 
-  beforeEach(() => {
-    repo = new TestWidgetRepository(freshDb());
+  beforeEach(async () => {
+    repo = new TestWidgetRepository(await freshDb());
   });
 
   it('round-trips a row through create + findById', async () => {
@@ -103,7 +103,7 @@ describe('BaseRepository', () => {
         super(db, testWidgets, false);
       }
     }
-    const hard = new HardRepo(freshDb());
+    const hard = new HardRepo(await freshDb());
     const { id } = await hard.create({ userId: 1, name: 'x' });
 
     await expect(hard.softDelete(id)).rejects.toThrow();
