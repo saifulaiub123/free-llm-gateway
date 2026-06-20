@@ -1,4 +1,4 @@
-import { boolean, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, doublePrecision, integer, serial, text, timestamp } from 'drizzle-orm/pg-core';
 import type { ColumnKit } from '../provider.contract.js';
 
 /**
@@ -13,6 +13,8 @@ export const postgresColumnKit = {
   timestamp: (name: string) => timestamp(name, { withTimezone: true }),
   boolean: (name: string) => boolean(name),
   integer: (name: string) => integer(name),
+  // `double precision` (float8) matches SQLite's 8-byte REAL precision for costs/scores.
+  real: (name: string) => doublePrecision(name),
   text: <T extends string>(name: string, config?: { enum: readonly [T, ...T[]] }) =>
     config ? text(name, config) : text(name),
 } as unknown as ColumnKit;

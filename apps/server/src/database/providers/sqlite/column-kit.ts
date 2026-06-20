@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { integer, text } from 'drizzle-orm/sqlite-core';
+import { integer, real, text } from 'drizzle-orm/sqlite-core';
 
 /**
  * Semantic column primitives for SQLite — the **canonical** `ColumnKit`. Its type defines the kit
@@ -27,6 +27,9 @@ export const sqliteColumnKit = {
 
   /** Integer column (also used for foreign-key columns). */
   integer: (name: string) => integer(name),
+
+  /** Floating-point (REAL) column for fractional metrics like costs, scores, and stability. */
+  real: (name: string) => real(name),
 
   /** Text column, optionally constrained to a string enum. */
   text: <T extends string>(name: string, config?: { enum: readonly [T, ...T[]] }) =>
