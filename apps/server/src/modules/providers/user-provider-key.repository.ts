@@ -19,6 +19,14 @@ export interface ProbeableKey {
   adapterType: string;
 }
 
+/** An owned key resolved for model discovery: provider id + ciphertext + adapter type. */
+export interface OwnedKey {
+  id: number;
+  providerId: number;
+  encryptedKey: string;
+  adapterType: string;
+}
+
 /** Persistence for `user_provider_keys` (the encrypted per-user key pool). */
 @Injectable()
 export class UserProviderKeyRepository extends BaseRepository<typeof userProviderKeys> {
@@ -81,5 +89,32 @@ export class UserProviderKeyRepository extends BaseRepository<typeof userProvide
       .update(userProviderKeys)
       .set({ status, lastCheckedAt: new Date(), modifiedAt: new Date() })
       .where(eq(userProviderKeys.id, id));
+  }
+
+  /**
+   * Resolves an owned, active key with its provider id + adapter type for model discovery.
+   *
+   * Returns `undefined` when the key does not exist or belongs to another user (SEC-004), so callers
+   * can map that to a `404`.
+   */
+  async getOwned(userId: number, id: number): Promise<OwnedKey | undefined> {
+    const rows = await this.exec()
+      .select({
+        id: userProviderKeys.id,
+        providerId: userProviderKeys.providerId,
+        encryptedKey: userProviderKeys.encryptedKey,
+        adapterType: providers.adapterType,
+      })
+      .from(userProviderKeys)
+      .innerJoin(providers, eq(userProviderKeys.providerId, providers.id))
+      .where(
+        and(
+          eq(userProviderKeys.id, id),
+          this.scopedToUser(userId),
+          eq(userProviderKeys.isDeleted, false),
+        ),
+      )
+      .limit(1);
+    return rows[0];
   }
 }
