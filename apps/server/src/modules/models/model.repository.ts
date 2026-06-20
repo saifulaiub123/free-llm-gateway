@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { models, DatabaseService } from '../../database/index.js';
 import { BaseRepository } from '../../common/db/base.repository.js';
 import type { ModelUpsertRow } from './model-metadata.service.js';
@@ -61,5 +61,13 @@ export class ModelRepository extends BaseRepository<typeof models> {
       saved.push({ id: persisted.id, modelId: persisted.modelId, isFree: persisted.isFree });
     }
     return saved;
+  }
+
+  /** Loads catalog models by their ids (for building a user's model view). */
+  async findByIds(ids: number[]): Promise<(typeof models.$inferSelect)[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    return this.exec().select().from(models).where(inArray(models.id, ids));
   }
 }

@@ -23,6 +23,6 @@ import { ProviderCatalogSeeder } from './provider-catalog.seeder.js';
     ProviderCatalogSeeder,
     { provide: AdapterRegistry, useFactory: (): AdapterRegistry => new AdapterRegistry() },
   ],
-  exports: [AdapterRegistry, EncryptionService, UserProviderKeyRepository],
+  exports: [AdapterRegistry, EncryptionService, UserProviderKeyRepository, ProviderRepository],
 })
 export class ProvidersModule {}

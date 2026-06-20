@@ -64,4 +64,46 @@ export class UserModelRepository extends BaseRepository<typeof userModels> {
       .limit(1);
     return rows[0];
   }
+
+  /** Updates `enabled`/`overrides` on one of the user's rows; returns the new row or `undefined`. */
+  async updateOwned(
+    userId: number,
+    id: number,
+    patch: { enabled?: boolean; overrides?: string | null },
+  ): Promise<typeof userModels.$inferSelect | undefined> {
+    if (!(await this.findOwned(userId, id))) {
+      return undefined;
+    }
+    const rows = await this.exec()
+      .update(userModels)
+      .set({ ...patch, modifiedAt: new Date() })
+      .where(eq(userModels.id, id))
+      .returning();
+    return rows[0];
+  }
+
+  /** Inserts a fully-custom user model row and returns it. */
+  async createCustom(
+    values: typeof userModels.$inferInsert,
+  ): Promise<typeof userModels.$inferSelect> {
+    const rows = await this.exec().insert(userModels).values(values).returning();
+    return rows[0]!;
+  }
+
+  /** Soft-deletes one of the user's CUSTOM rows; returns whether a matching row was removed. */
+  async removeCustomOwned(userId: number, id: number): Promise<boolean> {
+    const rows = await this.exec()
+      .update(userModels)
+      .set({ isDeleted: true, modifiedAt: new Date() })
+      .where(
+        and(
+          eq(userModels.id, id),
+          this.scopedToUser(userId),
+          eq(userModels.isCustom, true),
+          eq(userModels.isDeleted, false),
+        ),
+      )
+      .returning({ id: userModels.id });
+    return rows.length > 0;
+  }
 }
