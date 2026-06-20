@@ -4,6 +4,7 @@ import { validateEnv } from './config/env.schema.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { TokensModule } from './modules/tokens/tokens.module.js';
 import { StaticModule } from './static/static.module.js';
 
 /**
@@ -25,6 +26,7 @@ import { StaticModule } from './static/static.module.js';
     DatabaseModule,
     StaticModule.register(),
     AuthModule,
+    TokensModule,
     HealthModule,
   ],
 })

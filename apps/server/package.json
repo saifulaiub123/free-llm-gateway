@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "start": "tsx src/main.ts",
+    "dev": "node --watch --import @swc-node/register/esm-register src/main.ts",
+    "start": "node --import @swc-node/register/esm-register src/main.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@nestjs/testing": "^10.4.0",
+    "@swc-node/register": "^1.11.1",
     "@swc/core": "^1.7.0",
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",

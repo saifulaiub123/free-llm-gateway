@@ -50,6 +50,15 @@ describe('Swagger docs (e2e)', () => {
     expect(Object.keys(response.body.paths)).toContain('/api/v1/health');
   });
 
+  it('includes the auth and tokens paths in the management doc', async () => {
+    const response = await request(app.getHttpServer()).get('/api/docs-json');
+    const paths = Object.keys(response.body.paths);
+    expect(paths).toContain('/api/v1/auth/register');
+    expect(paths).toContain('/api/v1/auth/login');
+    expect(paths).toContain('/api/v1/tokens');
+    expect(paths).toContain('/api/v1/tokens/{id}');
+  });
+
   it('serves the gateway OpenAPI document with the llm-token scheme', async () => {
     const response = await request(app.getHttpServer()).get('/v1/docs-json');
     expect(response.status).toBe(200);
