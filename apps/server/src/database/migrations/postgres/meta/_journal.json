@@ -15,6 +15,13 @@
       "when": 1781886132926,
       "tag": "0001_past_the_executioner",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781945542334,
+      "tag": "0002_nosy_senator_kelly",
+      "breakpoints": true
     }
   ]
 }

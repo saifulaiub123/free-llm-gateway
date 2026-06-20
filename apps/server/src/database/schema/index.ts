@@ -7,3 +7,5 @@
 export { users } from './users.js';
 export { refreshTokens } from './refresh-tokens.js';
 export { apiTokens } from './api-tokens.js';
+export { providers } from './providers.js';
+export { userProviderKeys } from './user-provider-keys.js';

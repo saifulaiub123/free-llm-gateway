@@ -15,6 +15,13 @@
       "when": 1781886127722,
       "tag": "0001_zippy_centennial",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1781944904870,
+      "tag": "0002_damp_puck",
+      "breakpoints": true
     }
   ]
 }

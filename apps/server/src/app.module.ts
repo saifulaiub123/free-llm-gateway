@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { validateEnv } from './config/env.schema.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { ProvidersModule } from './modules/providers/providers.module.js';
 import { TokensModule } from './modules/tokens/tokens.module.js';
 import { StaticModule } from './static/static.module.js';
 
@@ -23,10 +25,12 @@ import { StaticModule } from './static/static.module.js';
       envFilePath: ['.env', '../../.env'],
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     StaticModule.register(),
     AuthModule,
     TokensModule,
+    ProvidersModule,
     HealthModule,
   ],
 })
