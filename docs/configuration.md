@@ -24,6 +24,7 @@ The server is configured entirely through environment variables, validated at bo
 | `DB_TABLE_PREFIX` | _(empty)_ | Prepended to every table name (e.g. `lg_`). |
 | `MAX_FALLBACK_ATTEMPTS` | `20` | Max providers tried per request. |
 | `HEALTH_PROBE_INTERVAL_MS` | `300000` | Key health-probe interval. |
+| `REQUEST_LOG_RETENTION_DAYS` | `90` | `/v1` request logs older than this are pruned by a daily job. |
 
 ## Database
 

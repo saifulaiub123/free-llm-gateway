@@ -4,7 +4,9 @@ A self-hosted, free-first, multi-user LLM routing gateway: an **OpenAI-compatibl
 that aggregates many providers' free tiers and routes each request through a configurable,
 metric-driven fallback chain — exhausting free capacity before touching paid models.
 
-> Status: in active development (Phase 0 — scaffolding). See [plan](./plan/) for the roadmap.
+> Status: MVP feature-complete — management API, OpenAI-compatible gateway, metric-driven routing
+> engine, usage analytics, and the SvelteKit dashboard are implemented; packaging and integration
+> testing are in progress. See [plan](./plan/) for the roadmap.
 
 ## Tech stack
 
@@ -73,16 +75,22 @@ required ones are `ENCRYPTION_KEY`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`.
 
 ```
 apps/
-  server/   NestJS API (management /api/v1 + gateway /v1)
+  server/   NestJS API (management /api/v1 + gateway /v1); Drizzle DB layer in src/database/
   client/   SvelteKit SPA dashboard
 packages/
-  db/                 Drizzle schema, table factory, connection factory, migrations
   shared-types/       DTOs shared between server and client
   provider-adapters/  Base + per-provider adapter classes + registry
-docker/     Dockerfile
+docker/     Dockerfile + container commands
 docs/       Documentation
 ```
 
 ## Documentation
 
-See [`docs/`](./docs/README.md) for configuration, architecture, and contributor guides.
+See [`docs/`](./docs/README.md):
+
+- [Configuration](./docs/configuration.md) — every environment variable and database setup.
+- [Architecture](./docs/architecture.md) — modules, routing engine, provider adapters.
+- [Routing strategies](./docs/routing-strategies.md) — Manual sub-modes + Balanced/Smart/Fastest/Free-First.
+- [Security model](./docs/security.md) — encryption, hashed tokens, two guards, per-user isolation.
+- [API reference](./docs/api-reference.md) — `/api/v1` (management) and `/v1` (OpenAI-compatible) with examples.
+- [Adding a provider adapter](./docs/adding-a-provider.md) — contributor guide.
