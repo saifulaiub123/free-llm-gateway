@@ -11,3 +11,4 @@ export { providers } from './providers.js';
 export { userProviderKeys } from './user-provider-keys.js';
 export { models } from './models.js';
 export { userModels } from './user-models.js';
+export { rateLimitCounters } from './rate-limit-counters.js';
