@@ -87,6 +87,18 @@ export class ModelsService {
     );
   }
 
+  /** Returns the user's ENABLED models with their provider key, for the OpenAI `/v1/models` list. */
+  async listEnabled(userId: number): Promise<{ modelId: string; providerKey: string }[]> {
+    const enabled = (await this.listForUser(userId)).filter((view) => view.enabled);
+    const providerKeyById = new Map(
+      (await this.catalog.listAll()).map((provider) => [provider.id, provider.key]),
+    );
+    return enabled.map((view) => ({
+      modelId: view.modelId,
+      providerKey: view.providerId !== null ? (providerKeyById.get(view.providerId) ?? 'custom') : 'custom',
+    }));
+  }
+
   /** Enables/disables a user model or sets overrides. Throws `404` when the row is not the caller's. */
   async updateUserModel(
     userId: number,

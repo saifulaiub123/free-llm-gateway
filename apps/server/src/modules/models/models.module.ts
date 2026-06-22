@@ -15,6 +15,6 @@ import { ModelMetadataService } from './model-metadata.service.js';
   imports: [ProvidersModule],
   controllers: [ModelsController],
   providers: [ModelsService, ModelRepository, UserModelRepository, ModelMetadataService],
-  exports: [ModelRepository, UserModelRepository],
+  exports: [ModelRepository, UserModelRepository, ModelsService],
 })
 export class ModelsModule {}
