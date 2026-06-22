@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, UnprocessableEntityException } from '@nestjs/common';
 import type { ChatRequest } from '@gateway/provider-adapters';
 import { GatewayService } from './gateway.service.js';
 import type { RoutingService } from '../routing/routing.service.js';
 import type { RoutingStrategyRepository } from '../routing/routing-strategy.repository.js';
 
-function build(defaultType?: string) {
-  const buildChain = vi.fn().mockResolvedValue([]);
+function build(defaultType?: string, chain: unknown[] = [{ providerKey: 'groq', modelId: 1 }]) {
+  const buildChain = vi.fn().mockResolvedValue(chain);
   const routing = { buildChain } as unknown as RoutingService;
   const findDefault = vi.fn().mockResolvedValue(defaultType ? { type: defaultType } : undefined);
   const strategies = { findDefault } as unknown as RoutingStrategyRepository;
@@ -45,5 +45,16 @@ describe('GatewayService', () => {
     await expect(
       service.buildChain(7, { messages: [] } as unknown as ChatRequest),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('buildChain rejects with 422 no_capable_model when no model satisfies the caps (TASK-053)', async () => {
+    const { service } = build('balanced', []);
+    const error = await service
+      .buildChain(7, req({ messages: [{ role: 'user', content: [{ type: 'image_url' }] }] }))
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(UnprocessableEntityException);
+    expect((error as UnprocessableEntityException).getResponse()).toMatchObject({
+      code: 'no_capable_model',
+    });
   });
 });

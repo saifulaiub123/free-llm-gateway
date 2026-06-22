@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnprocessableEntityException } from '@nestjs/common';
 import type { ChatRequest } from '@gateway/provider-adapters';
 import { RoutingService } from '../routing/routing.service.js';
 import { RoutingStrategyRepository } from '../routing/routing-strategy.repository.js';
@@ -41,7 +41,22 @@ export class GatewayService {
       throw new BadRequestException('`model` and `messages` are required');
     }
     const strategyType = await this.resolveStrategyType(userId, header);
-    return this.routing.buildChain(userId, body.model, strategyType, this.capsOf(body));
+    const chain = await this.routing.buildChain(
+      userId,
+      body.model,
+      strategyType,
+      this.capsOf(body),
+    );
+    // WHY: an empty chain means no enabled model satisfies the request's required capabilities
+    // (e.g. an image request with no vision-capable model). Surface it as 422 with a stable
+    // machine-readable `code` rather than letting the executor return a misleading 503.
+    if (chain.length === 0) {
+      throw new UnprocessableEntityException({
+        code: 'no_capable_model',
+        message: 'No enabled model satisfies the requested capabilities',
+      });
+    }
+    return chain;
   }
 
   /**
