@@ -43,11 +43,74 @@ jobs:
       - name: Build
         run: pnpm build
 
+  # Cross-driver verification (TASK-064 / TEST-011): apply the committed PostgreSQL migrations against
+  # a real Postgres and round-trip a row under a non-default DB_SCHEMA, proving the gateway boots on
+  # both drivers and that DB_SCHEMA is honored (SQLite is covered by the in-memory suite in `build`).
+  cross-driver:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gateway
+          POSTGRES_PASSWORD: gateway
+          POSTGRES_DB: gateway
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_PROVIDER: postgres
+      DB_URL: postgres://gateway:gateway@localhost:5432/gateway
+      DB_SCHEMA: gw
+      DB_TABLE_PREFIX: ''
+      ENCRYPTION_KEY: '0000000000000000000000000000000000000000000000000000000000000000'
+      JWT_ACCESS_SECRET: ci-access-secret-ci-access-secret-0001
+      JWT_REFRESH_SECRET: ci-refresh-secret-ci-refresh-secret-001
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.15.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply PostgreSQL migrations
+        run: pnpm --filter server db:migrate
+
+      - name: Verify PostgreSQL round-trip + DB_SCHEMA
+        run: pnpm --filter server verify:postgres
+
   docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Build the production image to catch Dockerfile/runtime regressions (no push).
-      - name: Build Docker image
-        run: docker build -f docker/Dockerfile -t free-llm-gateway:ci .
+      # Multi-arch verification: build linux/amd64 + linux/arm64 to catch arch-specific regressions.
+      # No push (no registry credentials in CI); publishing is a release-time concern.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build multi-arch Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: free-llm-gateway:ci

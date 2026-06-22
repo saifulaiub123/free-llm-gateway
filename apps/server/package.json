@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
-    "db:migrate": "tsx src/database/migrate.ts"
+    "db:migrate": "tsx src/database/migrate.ts",
+    "verify:postgres": "tsx scripts/verify-postgres.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

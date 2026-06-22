@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Multi-stage build for the Free LLM Gateway.
-# Builds the SvelteKit client to a static SPA and runs the NestJS server (via tsx).
+# Builds the SvelteKit client to a static SPA and runs the NestJS server (via @swc-node/register).
 
 ARG NODE_VERSION=22.15.0
 
@@ -40,5 +40,6 @@ COPY --from=build /app ./
 VOLUME ["/app/apps/server/data"]
 EXPOSE 5001
 WORKDIR /app/apps/server
-# The server runs via tsx (handles TypeScript + decorator metadata + workspace resolution).
+# The server runs via @swc-node/register (TypeScript + emitDecoratorMetadata for NestJS DI +
+# workspace resolution). tsx/esbuild is NOT used at runtime — it drops decorator metadata.
 CMD ["pnpm", "start"]

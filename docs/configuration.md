@@ -30,3 +30,8 @@ The server is configured entirely through environment variables, validated at bo
 
 The gateway runs identically on SQLite (zero-config dev) and PostgreSQL (production). Switch with
 `DB_PROVIDER` + `DB_URL`. Generate and apply migrations with `pnpm db:generate` / `pnpm db:migrate`.
+
+On PostgreSQL, `DB_SCHEMA` is honored at runtime and during migration (every pooled connection pins
+its `search_path`, and the migrator creates the schema first). `DB_TABLE_PREFIX` is baked into the
+**generated migration SQL**, so set it before running `pnpm db:generate` and keep it stable for a
+deployment — changing the prefix means regenerating migrations.
