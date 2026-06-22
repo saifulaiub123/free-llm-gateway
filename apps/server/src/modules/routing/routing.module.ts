@@ -9,6 +9,8 @@ import { RoutingService } from './routing.service.js';
 import { StrategiesService } from './strategies.service.js';
 import { StrategiesController } from './strategies.controller.js';
 import { RoutingStrategyRepository } from './routing-strategy.repository.js';
+import { SettingsService } from './settings.service.js';
+import { SettingsRepository } from './settings.repository.js';
 import { RoutingStrategyFactory } from './strategies/routing-strategy.factory.js';
 import { ManualStrategy } from './strategies/manual.strategy.js';
 import { FreeFirstStrategy } from './strategies/free-first.strategy.js';
@@ -31,6 +33,8 @@ import { BalancedStrategy } from './strategies/balanced.strategy.js';
     RoutingService,
     StrategiesService,
     RoutingStrategyRepository,
+    SettingsService,
+    SettingsRepository,
     RoutingStrategyFactory,
     ManualStrategy,
     FreeFirstStrategy,
