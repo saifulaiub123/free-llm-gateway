@@ -29,6 +29,8 @@ export interface RoutingCandidate {
   available: boolean;
   /** Fraction of rate-limit caps remaining, 0..1. */
   rateLimitHeadroom: number;
+  /** Capability flags used by `ChainFilter` to honor request requirements. */
+  capabilities: { vision: boolean; tools: boolean; json: boolean };
   /** Saved manual position for `Manual.fixed`. */
   position: number;
 }
