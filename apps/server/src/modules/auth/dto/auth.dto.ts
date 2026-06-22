@@ -43,3 +43,12 @@ export class TokenPairDto {
   @ApiProperty({ description: 'Opaque, rotating refresh token (store securely).' })
   refreshToken!: string;
 }
+
+/** Public registration status for the register page (no auth required). */
+export class RegistrationStatusDto {
+  @ApiProperty({ description: 'Whether new users may self-register right now.' })
+  registrationEnabled!: boolean;
+
+  @ApiProperty({ description: 'Whether any account exists yet (the first registration bootstraps an admin).' })
+  hasUsers!: boolean;
+}

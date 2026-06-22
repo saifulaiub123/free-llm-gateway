@@ -91,4 +91,12 @@ describe('Auth (e2e)', () => {
     // After logout the token is revoked, so refresh is rejected.
     await authPost(app, 'refresh', { refreshToken }).expect(401);
   });
+
+  it('exposes public registration status (TASK-074)', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/auth/registration-status')
+      .expect(200);
+    // Users were registered earlier in this suite, and the flag defaults to enabled.
+    expect(response.body.data).toEqual({ registrationEnabled: true, hasUsers: true });
+  });
 });
