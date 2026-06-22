@@ -23,6 +23,12 @@ const REFRESH_DDL = `CREATE TABLE refresh_tokens (
   expires_at INTEGER NOT NULL, revoked_at INTEGER, replaced_by_token_id INTEGER,
   created_by_ip TEXT, user_agent TEXT
 )`;
+// Registration gating (TASK-073) reads the settings store on non-bootstrap registrations.
+const SETTINGS_DDL = `CREATE TABLE settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  scope TEXT NOT NULL, user_id INTEGER, key TEXT NOT NULL, value TEXT NOT NULL
+)`;
 
 /** Boots the full app with production global config and creates the identity tables on its db. */
 async function bootstrapApp(): Promise<INestApplication> {
@@ -33,6 +39,7 @@ async function bootstrapApp(): Promise<INestApplication> {
   const db = app.get(DatabaseService).db;
   await db.run(sql.raw(USERS_DDL));
   await db.run(sql.raw(REFRESH_DDL));
+  await db.run(sql.raw(SETTINGS_DDL));
   return app;
 }
 
