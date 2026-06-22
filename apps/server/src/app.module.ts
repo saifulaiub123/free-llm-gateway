@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { ProvidersModule } from './modules/providers/providers.module.js';
 import { ModelsModule } from './modules/models/models.module.js';
+import { RateLimitModule } from './modules/rate-limit/rate-limit.module.js';
 import { TokensModule } from './modules/tokens/tokens.module.js';
 import { StaticModule } from './static/static.module.js';
 
@@ -33,6 +34,7 @@ import { StaticModule } from './static/static.module.js';
     TokensModule,
     ProvidersModule,
     ModelsModule,
+    RateLimitModule,
     HealthModule,
   ],
 })
