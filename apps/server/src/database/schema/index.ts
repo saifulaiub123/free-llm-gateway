@@ -13,3 +13,4 @@ export { models } from './models.js';
 export { userModels } from './user-models.js';
 export { rateLimitCounters } from './rate-limit-counters.js';
 export { cooldowns } from './cooldowns.js';
+export { modelRuntimeStats } from './model-runtime-stats.js';
