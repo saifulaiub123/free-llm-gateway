@@ -74,4 +74,108 @@ export class RoutingStrategyRepository extends BaseRepository<typeof routingStra
       .where(eq(strategyModelOrder.strategyId, strategyId));
     return new Map(rows.map((row) => [row.userModelId, row.position]));
   }
+
+  /** Lists the user's (non-deleted) strategies. */
+  listByUser(userId: number): Promise<(typeof routingStrategies.$inferSelect)[]> {
+    return this.findAll(this.scopedToUser(userId));
+  }
+
+  /** Finds one of the user's strategies by id (scoped, non-deleted), or `undefined`. */
+  async findOwned(
+    userId: number,
+    id: number,
+  ): Promise<typeof routingStrategies.$inferSelect | undefined> {
+    const rows = await this.exec()
+      .select()
+      .from(routingStrategies)
+      .where(
+        and(
+          eq(routingStrategies.id, id),
+          this.scopedToUser(userId),
+          eq(routingStrategies.isDeleted, false),
+        ),
+      )
+      .limit(1);
+    return rows[0];
+  }
+
+  /** Creates a strategy for the user (config is a JSON-encoded string). */
+  async createForUser(
+    userId: number,
+    type: StrategyType,
+    name: string,
+    config: string,
+  ): Promise<typeof routingStrategies.$inferSelect> {
+    const rows = await this.exec()
+      .insert(routingStrategies)
+      .values({ userId, type, name, config })
+      .returning();
+    return rows[0]!;
+  }
+
+  /** Updates `name`/`config` on one of the user's strategies; returns the new row or `undefined`. */
+  async updateOwned(
+    userId: number,
+    id: number,
+    patch: { name?: string; config?: string },
+  ): Promise<typeof routingStrategies.$inferSelect | undefined> {
+    if (!(await this.findOwned(userId, id))) {
+      return undefined;
+    }
+    const rows = await this.exec()
+      .update(routingStrategies)
+      .set({ ...patch, modifiedAt: new Date() })
+      .where(eq(routingStrategies.id, id))
+      .returning();
+    return rows[0];
+  }
+
+  /**
+   * Makes a strategy the user's default, unsetting the previous default in one transaction.
+   * Returns false when the strategy is not the user's.
+   */
+  async setDefault(userId: number, id: number): Promise<boolean> {
+    if (!(await this.findOwned(userId, id))) {
+      return false;
+    }
+    await this.database.db.transaction(async (tx) => {
+      await tx
+        .update(routingStrategies)
+        .set({ isDefault: false, modifiedAt: new Date() })
+        .where(and(this.scopedToUser(userId), eq(routingStrategies.isDefault, true)));
+      await tx
+        .update(routingStrategies)
+        .set({ isDefault: true, modifiedAt: new Date() })
+        .where(eq(routingStrategies.id, id));
+    });
+    return true;
+  }
+
+  /**
+   * Replaces a strategy's saved model order (drag reorder) in one transaction. Returns false when the
+   * strategy is not the user's.
+   */
+  async replaceOrder(
+    userId: number,
+    strategyId: number,
+    items: { userModelId: number; position: number; enabled?: boolean }[],
+  ): Promise<boolean> {
+    if (!(await this.findOwned(userId, strategyId))) {
+      return false;
+    }
+    await this.database.db.transaction(async (tx) => {
+      await tx.delete(strategyModelOrder).where(eq(strategyModelOrder.strategyId, strategyId));
+      if (items.length > 0) {
+        await tx.insert(strategyModelOrder).values(
+          items.map((item) => ({
+            strategyId,
+            userModelId: item.userModelId,
+            position: item.position,
+            enabled: item.enabled ?? true,
+          })),
+        );
+      }
+    });
+    return true;
+  }
 }
