@@ -43,6 +43,13 @@
       "when": 1782107977465,
       "tag": "0005_parched_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782108102916,
+      "tag": "0006_fantastic_purifiers",
+      "breakpoints": true
     }
   ]
 }
