@@ -145,3 +145,33 @@ export interface LogPage {
 
 /** Supported analytics windows. */
 export type AnalyticsWindow = '24h' | '7d' | '30d';
+
+/** Whether public self-registration is open and whether any account exists yet. */
+export interface RegistrationStatus {
+  registrationEnabled: boolean;
+  hasUsers: boolean;
+}
+
+/** A global setting plus its registry metadata (drives the admin settings form). */
+export interface GlobalSetting {
+  key: string;
+  value: unknown;
+  default: unknown;
+  adminOnly: boolean;
+  description: string;
+}
+
+/** A user row for the admin list (never the password hash). */
+export interface AdminUser {
+  id: number;
+  email: string;
+  role: 'admin' | 'user';
+  isActive: boolean;
+  createdAt: string;
+}
+
+/** One page of admin users plus the next keyset cursor. */
+export interface AdminUserPage {
+  items: AdminUser[];
+  nextCursor: number | null;
+}

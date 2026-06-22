@@ -26,6 +26,17 @@
     { href: '/settings', label: 'Settings' },
   ];
 
+  // Admin-only entries appear when the signed-in principal holds the `admin` role (the server still
+  // enforces the real boundary via RolesGuard; this only hides the UI from non-admins).
+  const adminLinks = [
+    { href: '/admin/users', label: 'Users' },
+    { href: '/admin/settings', label: 'Admin settings' },
+  ];
+
+  const navLinks = $derived(
+    authStore.user?.role === 'admin' ? [...links, ...adminLinks] : links,
+  );
+
   const current = $derived($page.url.pathname);
 
   async function logout(): Promise<void> {
@@ -38,7 +49,7 @@
   <aside class="hidden w-56 shrink-0 border-r border-border bg-surface md:block">
     <div class="px-4 py-4 text-lg font-semibold">Free LLM Gateway</div>
     <nav class="space-y-1 px-2">
-      {#each links as link (link.href)}
+      {#each navLinks as link (link.href)}
         <a
           href={link.href}
           class="block rounded px-3 py-2 text-sm transition {current.startsWith(link.href)
@@ -54,7 +65,7 @@
   <div class="flex min-w-0 flex-1 flex-col">
     <header class="flex items-center justify-between border-b border-border px-6 py-3">
       <nav class="flex gap-2 overflow-x-auto md:hidden">
-        {#each links as link (link.href)}
+        {#each navLinks as link (link.href)}
           <a
             href={link.href}
             class="whitespace-nowrap rounded px-2 py-1 text-xs {current.startsWith(link.href)

@@ -1,13 +1,17 @@
 import { apiFetch } from './client';
 import type {
+  AdminUser,
+  AdminUserPage,
   ApiTokenMetadata,
   CreatedToken,
   FetchModelsResult,
+  GlobalSetting,
   LogPage,
   ModelView,
   Provider,
   ProviderKey,
   ProviderUsageRow,
+  RegistrationStatus,
   ReorderItem,
   StrategyType,
   StrategyView,
@@ -84,4 +88,22 @@ export const analyticsApi = {
     apiFetch<ProviderUsageRow[]>('/analytics/by-provider', { query: { window } }),
   logs: (cursor?: number, limit?: number) =>
     apiFetch<LogPage>('/logs', { query: { cursor, limit } }),
+};
+
+/** Public auth status (`/api/v1/auth`) — no token required. */
+export const authApi = {
+  registrationStatus: () => apiFetch<RegistrationStatus>('/auth/registration-status'),
+};
+
+/** Admin-only governance (`/api/v1/admin`) — requires the `admin` role server-side. */
+export const adminApi = {
+  listSettings: () => apiFetch<GlobalSetting[]>('/admin/settings'),
+  updateSetting: (key: string, value: unknown) =>
+    apiFetch<{ updated: true }>(`/admin/settings/${key}`, { method: 'PUT', body: { value } }),
+  listUsers: (cursor?: number, limit?: number) =>
+    apiFetch<AdminUserPage>('/admin/users', { query: { cursor, limit } }),
+  createUser: (email: string, password: string, role: 'admin' | 'user') =>
+    apiFetch<AdminUser>('/admin/users', { method: 'POST', body: { email, password, role } }),
+  updateUser: (id: number, patch: { role?: 'admin' | 'user'; isActive?: boolean }) =>
+    apiFetch<AdminUser>(`/admin/users/${id}`, { method: 'PATCH', body: patch }),
 };
