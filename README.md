@@ -4,10 +4,10 @@ A self-hosted, free-first, multi-user LLM routing gateway: an **OpenAI-compatibl
 that aggregates many providers' free tiers and routes each request through a configurable,
 metric-driven fallback chain — exhausting free capacity before touching paid models.
 
-> Status: MVP complete — management API, OpenAI-compatible gateway, metric-driven routing engine,
-> usage analytics, the SvelteKit dashboard, docs, and the Docker image are all implemented and tested
-> (Phases 0–9). Phase 10 (admin governance + settings) is the planned follow-up. See
-> [plan](./plan/) for the roadmap.
+> Status: complete — management API, OpenAI-compatible gateway, metric-driven routing engine, usage
+> analytics, the SvelteKit dashboard, admin governance (first-user-admin, registration control, user
+> management, typed settings), docs, and the Docker image are all implemented and tested (Phases 0–10).
+> See [plan](./plan/) for the roadmap.
 
 ## Tech stack
 
