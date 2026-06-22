@@ -9,6 +9,7 @@ import { ProvidersModule } from './modules/providers/providers.module.js';
 import { ModelsModule } from './modules/models/models.module.js';
 import { RateLimitModule } from './modules/rate-limit/rate-limit.module.js';
 import { RoutingModule } from './modules/routing/routing.module.js';
+import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { GatewayModule } from './modules/gateway/gateway.module.js';
 import { TokensModule } from './modules/tokens/tokens.module.js';
 import { StaticModule } from './static/static.module.js';
@@ -38,6 +39,7 @@ import { StaticModule } from './static/static.module.js';
     ModelsModule,
     RateLimitModule,
     RoutingModule,
+    AnalyticsModule,
     GatewayModule,
     HealthModule,
   ],
