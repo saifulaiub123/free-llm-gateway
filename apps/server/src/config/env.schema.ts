@@ -32,6 +32,9 @@ export const envSchema = z.object({
 
   MAX_FALLBACK_ATTEMPTS: z.coerce.number().int().positive().default(20),
   HEALTH_PROBE_INTERVAL_MS: z.coerce.number().int().positive().default(300_000),
+
+  // Per-request /v1 logs older than this are pruned by a scheduled retention job (TASK-056).
+  REQUEST_LOG_RETENTION_DAYS: z.coerce.number().int().positive().default(90),
 });
 
 /** Fully-validated, typed environment configuration. */

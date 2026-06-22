@@ -71,6 +71,13 @@
       "when": 1782118397698,
       "tag": "0009_sweet_squadron_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782122492732,
+      "tag": "0010_oval_winter_soldier",
+      "breakpoints": true
     }
   ]
 }

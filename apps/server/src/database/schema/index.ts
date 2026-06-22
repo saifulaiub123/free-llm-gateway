@@ -17,3 +17,4 @@ export { modelRuntimeStats } from './model-runtime-stats.js';
 export { routingStrategies } from './routing-strategies.js';
 export { strategyModelOrder } from './strategy-model-order.js';
 export { settings } from './settings.js';
+export { requestLogs } from './request-logs.js';

@@ -71,6 +71,13 @@
       "when": 1782118392775,
       "tag": "0009_kind_peter_quill",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1782122456011,
+      "tag": "0010_aspiring_fixer",
+      "breakpoints": true
     }
   ]
 }
