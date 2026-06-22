@@ -6,6 +6,7 @@ import { HealthModule } from '../../modules/health/health.module.js';
 import { ModelsModule } from '../../modules/models/models.module.js';
 import { ProvidersModule } from '../../modules/providers/providers.module.js';
 import { RoutingModule } from '../../modules/routing/routing.module.js';
+import { AdminModule } from '../../modules/admin/admin.module.js';
 import { AnalyticsModule } from '../../modules/analytics/analytics.module.js';
 import { TokensModule } from '../../modules/tokens/tokens.module.js';
 
@@ -20,6 +21,7 @@ const MANAGEMENT_MODULES = [
   ModelsModule,
   RoutingModule,
   AnalyticsModule,
+  AdminModule,
   HealthModule,
 ];
 

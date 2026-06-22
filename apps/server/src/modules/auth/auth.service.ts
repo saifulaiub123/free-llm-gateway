@@ -73,6 +73,24 @@ export class AuthService {
     return { registrationEnabled, hasUsers };
   }
 
+  /**
+   * Creates an account on behalf of an admin (TASK-075) — bypasses the self-registration gate and
+   * issues no tokens. Used by `AdminUsersController` so an admin can add users even when public
+   * registration is disabled.
+   */
+  async createAccount(
+    email: string,
+    password: string,
+    role: 'admin' | 'user',
+  ): Promise<{ id: number; email: string; role: string; isActive: boolean }> {
+    if (await this.users.findByEmail(email)) {
+      throw new ConflictException('Email already in use');
+    }
+    const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
+    const user = await this.users.create({ email, passwordHash, role });
+    return { id: user.id, email: user.email, role: user.role, isActive: user.isActive };
+  }
+
   /** Rotates a refresh token and issues a new pair in the same family. */
   async refresh(presentedToken: string, ctx?: RequestContext): Promise<TokenPair> {
     const { userId, familyId } = await this.refreshTokens.rotate(presentedToken);
