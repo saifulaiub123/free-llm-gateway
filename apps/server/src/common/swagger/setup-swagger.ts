@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AuthModule } from '../../modules/auth/auth.module.js';
+import { GatewayModule } from '../../modules/gateway/gateway.module.js';
 import { HealthModule } from '../../modules/health/health.module.js';
 import { ModelsModule } from '../../modules/models/models.module.js';
 import { ProvidersModule } from '../../modules/providers/providers.module.js';
@@ -22,9 +23,8 @@ const MANAGEMENT_MODULES = [
 
 /**
  * Feature modules exposed under the OpenAI-compatible gateway (`/v1`), documented at `/v1/docs`.
- * Populated in Phase 6 when the gateway controllers exist (kept empty until then).
  */
-const GATEWAY_MODULES: Array<new (...args: never[]) => unknown> = [];
+const GATEWAY_MODULES: Array<new (...args: never[]) => unknown> = [GatewayModule];
 
 /** Builds and mounts the JWT-secured management API document at `/api/docs` (+ JSON spec). */
 const setupManagementDocs = (app: INestApplication): void => {

@@ -19,8 +19,17 @@ export interface ResponseEnvelope<T> {
  * are excluded from the global prefix and will opt out via a dedicated decorator when added.
  */
 @Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, ResponseEnvelope<T>> {
-  intercept(_context: ExecutionContext, next: CallHandler<T>): Observable<ResponseEnvelope<T>> {
+export class TransformInterceptor<T> implements NestInterceptor<T, ResponseEnvelope<T> | T> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler<T>,
+  ): Observable<ResponseEnvelope<T> | T> {
+    const request = context.switchToHttp().getRequest<{ url?: string; originalUrl?: string }>();
+    const path = request.originalUrl ?? request.url ?? '';
+    // The OpenAI-compatible /v1 gateway MUST stay wire-compatible (CON-003): never envelope it.
+    if (path === '/v1' || path.startsWith('/v1/')) {
+      return next.handle();
+    }
     return next.handle().pipe(map((data) => ({ data })));
   }
 }
