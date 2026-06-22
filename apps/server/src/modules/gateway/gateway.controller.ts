@@ -93,7 +93,9 @@ export class GatewayController {
       if (result.attempts > 0) {
         res.setHeader('X-Fallback-Attempts', String(result.attempts));
       }
-      res.json(result.response);
+      // OpenAI chat completions return 200 (not Nest's `@Post` default 201) so external clients
+      // (e.g. ScraperQ) see the standard status they expect.
+      res.status(200).json(result.response);
     } catch (error) {
       // WHY log before rethrow: an all-failed request is still a usage event analytics must see.
       await this.logging.record({

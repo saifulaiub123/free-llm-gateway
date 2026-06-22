@@ -25,7 +25,7 @@ function build(result: ExecutionResult) {
     executor,
     logging,
   );
-  const res = { setHeader: vi.fn(), json: vi.fn() } as unknown as Response;
+  const res = { setHeader: vi.fn(), status: vi.fn().mockReturnThis(), json: vi.fn() } as unknown as Response;
   return { controller, res, buildChain, execute, record, chain };
 }
 
