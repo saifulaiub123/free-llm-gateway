@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { API_BASE } from '$lib/config';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { authStore } from '$lib/stores/auth.svelte';
+
+  // The root path is a router shim: send authenticated users to the dashboard, others to login.
+  onMount(() => {
+    void goto(authStore.isAuthenticated ? '/dashboard' : '/login', { replaceState: true });
+  });
 </script>
 
-<section class="space-y-2">
-  <h1 class="text-2xl font-bold">Dashboard</h1>
-  <p class="text-muted">
-    The management dashboard is built out in Phase 8. The API base is
-    <code class="rounded bg-surface px-1 py-0.5 text-sm">{API_BASE}</code>.
-  </p>
-</section>
+<div class="flex min-h-screen items-center justify-center">
+  <p class="text-muted">Loading…</p>
+</div>
