@@ -13,6 +13,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import type { CurrentUser as Principal } from '../auth/auth.types.js';
 import type { RoutingCandidate } from '../routing/types/routing-candidate.js';
 import { ModelsService } from '../models/models.service.js';
+import { RequestLoggingService } from '../analytics/request-logging.service.js';
 import { GatewayService } from './gateway.service.js';
 import { FallbackExecutor } from './fallback-executor.js';
 import { ChatCompletionDto } from './dto/chat-completion.dto.js';
@@ -38,6 +39,7 @@ export class GatewayController {
     private readonly models: ModelsService,
     private readonly gateway: GatewayService,
     private readonly executor: FallbackExecutor,
+    private readonly logging: RequestLoggingService,
   ) {}
 
   @Get('models')
@@ -70,16 +72,39 @@ export class GatewayController {
     @Res() res: Response,
   ): Promise<void> {
     const chain = await this.gateway.buildChain(user.id, body, strategyHeader);
+    const startedAt = Date.now();
     if (body.stream === true) {
-      await this.streamChat(user.id, chain, body, res);
+      await this.streamChat(user.id, chain, body, res, startedAt);
       return;
     }
-    const result = await this.executor.execute(user.id, chain, body);
-    res.setHeader('X-Routed-Via', result.routedVia);
-    if (result.attempts > 0) {
-      res.setHeader('X-Fallback-Attempts', String(result.attempts));
+    try {
+      const result = await this.executor.execute(user.id, chain, body);
+      await this.logging.record({
+        userId: user.id,
+        requestedModel: body.model,
+        eligible: chain,
+        latencyMs: Date.now() - startedAt,
+        status: 'success',
+        routedVia: result.routedVia,
+        fallbackAttempts: result.attempts,
+        usage: result.response.usage,
+      });
+      res.setHeader('X-Routed-Via', result.routedVia);
+      if (result.attempts > 0) {
+        res.setHeader('X-Fallback-Attempts', String(result.attempts));
+      }
+      res.json(result.response);
+    } catch (error) {
+      // WHY log before rethrow: an all-failed request is still a usage event analytics must see.
+      await this.logging.record({
+        userId: user.id,
+        requestedModel: body.model,
+        eligible: chain,
+        latencyMs: Date.now() - startedAt,
+        status: 'error',
+      });
+      throw error;
     }
-    res.json(result.response);
   }
 
   /**
@@ -91,6 +116,7 @@ export class GatewayController {
     chain: RoutingCandidate[],
     body: ChatRequest,
     res: Response,
+    startedAt: number,
   ): Promise<void> {
     const { stream, routedVia, attempts } = await this.executor.openStream(userId, chain, body);
     res.setHeader('Content-Type', 'text/event-stream');
@@ -105,5 +131,16 @@ export class GatewayController {
     }
     res.write('data: [DONE]\n\n');
     res.end();
+    // WHY token counts are 0 for streams: usage is not aggregated from SSE deltas here; the log still
+    // records the routing decision, latency, and cost-saved baseline (which is 0 at 0 tokens).
+    await this.logging.record({
+      userId,
+      requestedModel: body.model,
+      eligible: chain,
+      latencyMs: Date.now() - startedAt,
+      status: 'success',
+      routedVia,
+      fallbackAttempts: attempts,
+    });
   }
 }

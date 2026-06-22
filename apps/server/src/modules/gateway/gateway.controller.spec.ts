@@ -5,6 +5,7 @@ import { GatewayController } from './gateway.controller.js';
 import type { GatewayService } from './gateway.service.js';
 import type { FallbackExecutor, ExecutionResult } from './fallback-executor.js';
 import type { ModelsService } from '../models/models.service.js';
+import type { RequestLoggingService } from '../analytics/request-logging.service.js';
 import type { CurrentUser } from '../auth/auth.types.js';
 
 const USER: CurrentUser = { id: 7, role: 'user' };
@@ -16,9 +17,16 @@ function build(result: ExecutionResult) {
   const gateway = { buildChain } as unknown as GatewayService;
   const execute = vi.fn().mockResolvedValue(result);
   const executor = { execute } as unknown as FallbackExecutor;
-  const controller = new GatewayController({} as unknown as ModelsService, gateway, executor);
+  const record = vi.fn().mockResolvedValue(undefined);
+  const logging = { record } as unknown as RequestLoggingService;
+  const controller = new GatewayController(
+    {} as unknown as ModelsService,
+    gateway,
+    executor,
+    logging,
+  );
   const res = { setHeader: vi.fn(), json: vi.fn() } as unknown as Response;
-  return { controller, res, buildChain, execute, chain };
+  return { controller, res, buildChain, execute, record, chain };
 }
 
 describe('GatewayController.chat', () => {
@@ -37,6 +45,40 @@ describe('GatewayController.chat', () => {
     expect(res.setHeader).toHaveBeenCalledWith('X-Routed-Via', 'groq/llama-3.3-70b');
     expect(res.setHeader).not.toHaveBeenCalledWith('X-Fallback-Attempts', expect.anything());
     expect(res.json).toHaveBeenCalledWith(response);
+  });
+
+  it('logs a request_logs row on a successful completion (TASK-055)', async () => {
+    const { controller, res, record } = build({
+      response: { id: 'x', usage: { total_tokens: 10 } } as never,
+      routedVia: 'groq/llama-3.3-70b',
+      attempts: 1,
+    });
+
+    await controller.chat(USER, BODY, undefined, res);
+
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 7,
+        requestedModel: 'auto',
+        status: 'success',
+        routedVia: 'groq/llama-3.3-70b',
+        fallbackAttempts: 1,
+      }),
+    );
+  });
+
+  it('logs status error and rethrows when execution fails (TASK-055)', async () => {
+    const { controller, res, record } = build({
+      response: { id: 'x' } as never,
+      routedVia: 'groq/b',
+      attempts: 0,
+    });
+    (controller as unknown as { executor: FallbackExecutor }).executor.execute = vi
+      .fn()
+      .mockRejectedValue(new Error('all failed'));
+
+    await expect(controller.chat(USER, BODY, undefined, res)).rejects.toThrow('all failed');
+    expect(record).toHaveBeenCalledWith(expect.objectContaining({ status: 'error', userId: 7 }));
   });
 
   it('emits X-Fallback-Attempts when fallback occurred', async () => {
@@ -64,7 +106,13 @@ describe('GatewayController.chat (streaming, TASK-052)', () => {
       .fn()
       .mockResolvedValue({ stream: chunks(), routedVia: 'groq/m', attempts: 1 });
     const executor = { openStream } as unknown as FallbackExecutor;
-    const controller = new GatewayController({} as unknown as ModelsService, gateway, executor);
+    const logging = { record: vi.fn().mockResolvedValue(undefined) } as unknown as RequestLoggingService;
+    const controller = new GatewayController(
+      {} as unknown as ModelsService,
+      gateway,
+      executor,
+      logging,
+    );
     const writes: string[] = [];
     const res = {
       setHeader: vi.fn(),
