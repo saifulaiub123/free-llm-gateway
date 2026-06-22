@@ -41,7 +41,7 @@ function okResponse() {
 }
 
 /** Builds the executor with mocked collaborators and per-provider adapters. */
-function build(adapters: Record<string, { chatCompletion: ReturnType<typeof vi.fn> }>) {
+function build(adapters: Record<string, Record<string, unknown>>) {
   const registry = {
     get: vi.fn((key: string) => adapters[key]),
   } as unknown as AdapterRegistry;
@@ -109,5 +109,60 @@ describe('FallbackExecutor (TEST-005)', () => {
       executor.execute(1, [candidate(1, 10, 'provA'), candidate(2, 20, 'provB')], REQUEST),
     ).rejects.toBeInstanceOf(UpstreamError);
     expect(next).not.toHaveBeenCalled();
+  });
+});
+
+/** An async-generator factory that yields the given chunks. */
+function streamOf(...chunks: { id: string }[]) {
+  return () =>
+    (async function* () {
+      for (const chunk of chunks) {
+        yield chunk;
+      }
+    })();
+}
+
+/** An async-generator factory that throws before yielding (failure before the first chunk). */
+function throwingStream(error: Error) {
+  return () =>
+    // eslint-disable-next-line require-yield
+    (async function* () {
+      throw error;
+    })();
+}
+
+describe('FallbackExecutor.openStream (TEST-007)', () => {
+  it('opens on the first candidate whose first chunk yields, cooling earlier failures', async () => {
+    const { executor, placeOnCooldown } = build({
+      provA: { streamChatCompletion: throwingStream(new UpstreamError(429, 'rate')) },
+      provB: { streamChatCompletion: streamOf({ id: '1' }, { id: '2' }) },
+    });
+
+    const result = await executor.openStream(
+      1,
+      [candidate(1, 10, 'provA'), candidate(2, 20, 'provB')],
+      REQUEST,
+    );
+
+    expect(result.routedVia).toBe('provB/2');
+    expect(result.attempts).toBe(1);
+    expect(placeOnCooldown).toHaveBeenCalledWith({ keyId: 10 }, expect.any(Number), 'rate_limited');
+
+    const collected: string[] = [];
+    for await (const chunk of result.stream) {
+      collected.push((chunk as unknown as { id: string }).id);
+    }
+    expect(collected).toEqual(['1', '2']);
+  });
+
+  it('throws 503 when every candidate fails before the first chunk', async () => {
+    const { executor } = build({
+      provA: { streamChatCompletion: throwingStream(new UpstreamError(429, 'rate')) },
+      provB: { streamChatCompletion: throwingStream(new UpstreamError(503, 'down')) },
+    });
+
+    await expect(
+      executor.openStream(1, [candidate(1, 10, 'provA'), candidate(2, 20, 'provB')], REQUEST),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });

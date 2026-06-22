@@ -51,3 +51,39 @@ describe('GatewayController.chat', () => {
     expect(res.setHeader).toHaveBeenCalledWith('X-Fallback-Attempts', '2');
   });
 });
+
+describe('GatewayController.chat (streaming, TASK-052)', () => {
+  it('streams SSE: telemetry headers, one data line per chunk, then [DONE]', async () => {
+    const buildChain = vi.fn().mockResolvedValue([{ providerKey: 'groq', modelId: 1 }]);
+    const gateway = { buildChain } as unknown as GatewayService;
+    async function* chunks() {
+      yield { id: '1' };
+      yield { id: '2' };
+    }
+    const openStream = vi
+      .fn()
+      .mockResolvedValue({ stream: chunks(), routedVia: 'groq/m', attempts: 1 });
+    const executor = { openStream } as unknown as FallbackExecutor;
+    const controller = new GatewayController({} as unknown as ModelsService, gateway, executor);
+    const writes: string[] = [];
+    const res = {
+      setHeader: vi.fn(),
+      write: vi.fn((line: string) => writes.push(line)),
+      end: vi.fn(),
+    } as unknown as Response;
+
+    const streamingBody = { ...BODY, stream: true } as unknown as ChatRequest;
+    await controller.chat(USER, streamingBody, undefined, res);
+
+    expect(openStream).toHaveBeenCalled();
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/event-stream');
+    expect(res.setHeader).toHaveBeenCalledWith('X-Routed-Via', 'groq/m');
+    expect(res.setHeader).toHaveBeenCalledWith('X-Fallback-Attempts', '1');
+    expect(writes).toEqual([
+      'data: {"id":"1"}\n\n',
+      'data: {"id":"2"}\n\n',
+      'data: [DONE]\n\n',
+    ]);
+    expect(res.end).toHaveBeenCalled();
+  });
+});

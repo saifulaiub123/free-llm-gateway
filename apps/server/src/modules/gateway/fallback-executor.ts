@@ -2,6 +2,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import {
   AdapterRegistry,
   UpstreamError,
+  type ChatChunk,
   type ChatRequest,
   type ChatResponse,
 } from '@gateway/provider-adapters';
@@ -15,6 +16,13 @@ import type { RoutingCandidate } from '../routing/types/routing-candidate.js';
 /** A successful upstream response plus the routing telemetry the gateway emits as headers. */
 export interface ExecutionResult {
   response: ChatResponse;
+  routedVia: string;
+  attempts: number;
+}
+
+/** A live upstream SSE stream plus its routing telemetry. */
+export interface StreamResult {
+  stream: AsyncIterable<ChatChunk>;
   routedVia: string;
   attempts: number;
 }
@@ -99,6 +107,87 @@ export class FallbackExecutor {
     throw new ServiceUnavailableException(
       `All providers failed after ${attempts} attempts: ${lastError?.message ?? 'no eligible candidates'}`,
     );
+  }
+
+  /**
+   * Opens a streaming completion (TASK-052).
+   *
+   * WHY pre-first-token-only failover: once the first chunk is handed back we cannot transparently
+   * switch providers, so failover happens only while *selecting* a candidate — a candidate is accepted
+   * the moment its `streamChatCompletion` yields its first chunk without error; an error before that
+   * cools the key down and tries the next. The accepted live iterator is returned for the controller
+   * to pipe out as SSE.
+   */
+  async openStream(
+    userId: number,
+    chain: RoutingCandidate[],
+    request: ChatRequest,
+  ): Promise<StreamResult> {
+    let attempts = 0;
+    let lastError: Error | undefined;
+
+    for (const candidate of chain) {
+      if (attempts >= MAX_FALLBACK_ATTEMPTS) {
+        break;
+      }
+      if (
+        this.cooldown.isInCooldown({ keyId: candidate.keyId }) ||
+        this.cooldown.isInCooldown({ modelId: candidate.modelId })
+      ) {
+        continue;
+      }
+      const key = await this.keys.getOwned(userId, candidate.keyId);
+      if (!key) {
+        continue;
+      }
+      const adapter = this.registry.get(candidate.providerKey);
+      const startedAt = Date.now();
+      attempts += 1;
+      const iterator = adapter
+        .streamChatCompletion(request, this.encryption.decrypt(key.encryptedKey))
+        [Symbol.asyncIterator]();
+      try {
+        const first = await iterator.next(); // forces the upstream connection / first error
+        this.rateLimit.recordUsage(
+          { userId, providerId: key.providerId, modelId: candidate.modelId, keyId: candidate.keyId },
+          0, // token usage is unknown until the stream ends
+        );
+        this.stats.recordOutcome(userId, candidate.modelId, true, Date.now() - startedAt);
+        return {
+          stream: this.continueStream(first, iterator),
+          routedVia: `${candidate.providerKey}/${candidate.modelId}`,
+          attempts: attempts - 1,
+        };
+      } catch (error) {
+        lastError = error as Error;
+        this.stats.recordOutcome(userId, candidate.modelId, false, Date.now() - startedAt);
+        if (!this.isRetryable(error)) {
+          throw error;
+        }
+        this.cooldown.placeOnCooldown({ keyId: candidate.keyId }, BASE_COOLDOWN_MS, this.reasonOf(error));
+      }
+    }
+    throw new ServiceUnavailableException(
+      `All providers failed after ${attempts} attempts: ${lastError?.message ?? 'no eligible candidates'}`,
+    );
+  }
+
+  /** Re-emits the already-pulled first chunk, then drains the rest of the iterator. */
+  private async *continueStream(
+    first: IteratorResult<ChatChunk>,
+    rest: AsyncIterator<ChatChunk>,
+  ): AsyncIterable<ChatChunk> {
+    if (first.done) {
+      return;
+    }
+    yield first.value;
+    for (;;) {
+      const next = await rest.next();
+      if (next.done) {
+        return;
+      }
+      yield next.value;
+    }
   }
 
   /** Total tokens reported by the upstream response (0 when absent). */

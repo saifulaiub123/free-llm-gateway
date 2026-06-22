@@ -11,6 +11,7 @@ import type { ChatRequest } from '@gateway/provider-adapters';
 import { LlmApiTokenGuard } from '../../common/guards/llm-api-token.guard.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import type { CurrentUser as Principal } from '../auth/auth.types.js';
+import type { RoutingCandidate } from '../routing/types/routing-candidate.js';
 import { ModelsService } from '../models/models.service.js';
 import { GatewayService } from './gateway.service.js';
 import { FallbackExecutor } from './fallback-executor.js';
@@ -69,11 +70,40 @@ export class GatewayController {
     @Res() res: Response,
   ): Promise<void> {
     const chain = await this.gateway.buildChain(user.id, body, strategyHeader);
+    if (body.stream === true) {
+      await this.streamChat(user.id, chain, body, res);
+      return;
+    }
     const result = await this.executor.execute(user.id, chain, body);
     res.setHeader('X-Routed-Via', result.routedVia);
     if (result.attempts > 0) {
       res.setHeader('X-Fallback-Attempts', String(result.attempts));
     }
     res.json(result.response);
+  }
+
+  /**
+   * Streams a chat completion as SSE (TASK-052). Telemetry headers are set BEFORE the first `data:`
+   * line; once the stream opens an upstream error surfaces as a stream error (no transparent failover).
+   */
+  private async streamChat(
+    userId: number,
+    chain: RoutingCandidate[],
+    body: ChatRequest,
+    res: Response,
+  ): Promise<void> {
+    const { stream, routedVia, attempts } = await this.executor.openStream(userId, chain, body);
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Routed-Via', routedVia);
+    if (attempts > 0) {
+      res.setHeader('X-Fallback-Attempts', String(attempts));
+    }
+    for await (const chunk of stream) {
+      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    }
+    res.write('data: [DONE]\n\n');
+    res.end();
   }
 }
