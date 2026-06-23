@@ -1,9 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
 import { SQL, eq, gt, gte, lt, lte, like, inArray } from 'drizzle-orm';
-import type { AnyTable } from 'drizzle-orm';
 import type { FilterConfig, FilterOperator } from './query.types.js';
 
+/** Drizzle 0.33+ tables are accessed dynamically by column name — `any` avoids generic complexity. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TableLike = any;
+
 /** Maps filter operator suffix to Drizzle operator. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const OP_MAP: Record<FilterOperator, (col: any, val: any) => SQL> = {
   eq: (col, val) => eq(col, val),
   gt: (col, val) => gt(col, val),
@@ -27,10 +31,10 @@ const OP_MAP: Record<FilterOperator, (col: any, val: any) => SQL> = {
  */
 export class FilterBuilder {
   static build(
-    table: AnyTable,
+    table: TableLike,
     filter: Record<string, unknown> | undefined,
     config: FilterConfig,
-    joinTable?: AnyTable,
+    joinTable?: TableLike,
   ): SQL[] {
     if (!filter) return [];
 
@@ -62,6 +66,7 @@ export class FilterBuilder {
           `Column '${field}' requires a JOIN but no join table was provided`,
         );
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const drizzleCol = sourceTable[field as keyof typeof sourceTable] as any;
       if (!drizzleCol) {
         throw new BadRequestException(`Unknown column '${field}'`);

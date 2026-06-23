@@ -74,31 +74,39 @@ export class UserModelRepository extends BaseRepository<typeof userModels> {
     const offset = (query.page - 1) * query.per_page;
 
     // ── COUNT(*) query (same predicates, no limit/offset) ──
-    let countQuery = this.exec()
-      .select({ total: count() })
-      .from(userModels);
-
-    if (needsModelsJoin) {
-      countQuery = countQuery.leftJoin(models, eq(userModels.modelId, models.id));
-    }
-
-    const [countResult] = await countQuery.where(and(...predicates));
+    // Split into two branches to avoid leftJoin changing the query builder type.
+    const [countResult] = needsModelsJoin
+      ? await this.exec()
+          .select({ total: count() })
+          .from(userModels)
+          .leftJoin(models, eq(userModels.modelId, models.id))
+          .where(and(...predicates))
+      : await this.exec()
+          .select({ total: count() })
+          .from(userModels)
+          .where(and(...predicates));
     const total = countResult?.total ?? 0;
 
     // ── Data query ──
-    let dataQuery = this.exec()
-      .select(getTableColumns(userModels))
-      .from(userModels);
-
-    if (needsModelsJoin) {
-      dataQuery = dataQuery.leftJoin(models, eq(userModels.modelId, models.id));
-    }
-
-    const items: UserModelRow[] = await dataQuery
-      .where(and(...predicates))
-      .orderBy(...orderBy)
-      .limit(query.per_page)
-      .offset(offset);
+    // Same split: with or without LEFT JOIN. Using `.map()` to extract only
+    // user_models columns from the joined result if needed.
+    const items: UserModelRow[] = needsModelsJoin
+      ? await this.exec()
+          .select(getTableColumns(userModels))
+          .from(userModels)
+          .leftJoin(models, eq(userModels.modelId, models.id))
+          .where(and(...predicates))
+          .orderBy(...orderBy)
+          .limit(query.per_page)
+          .offset(offset)
+          .then((rows) => rows as unknown as UserModelRow[])
+      : await this.exec()
+          .select(getTableColumns(userModels))
+          .from(userModels)
+          .where(and(...predicates))
+          .orderBy(...orderBy)
+          .limit(query.per_page)
+          .offset(offset);
 
     return { items, page: query.page, perPage: query.per_page, total };
   }

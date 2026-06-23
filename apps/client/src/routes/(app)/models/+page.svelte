@@ -34,6 +34,8 @@
   let loading = $state(false);
   let filter = $state<Record<string, unknown>>({});
   let sort = $state<string | undefined>(undefined);
+  let providerFilter = $state('');
+  let searchQuery = $state('');
   // Debounce timer for search input
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -157,8 +159,10 @@
 
 <PageHeader title="Models" description="Fetch a key's available models, enable the ones you want to route to, or add a custom model." />
 
-<Async {loadMeta}>
-  {#snippet children([providers, keys], _reloadMeta)}
+<Async load={loadMeta}>
+  {#snippet children(data, _reloadMeta)}
+    {@const providers = data[0] as Provider[]}
+    {@const keys = data[1] as ProviderKey[]}
     {@const providerName = (id: number | null) =>
       id != null
         ? providers.find((p) => p.id === id)?.displayName ?? `Provider #${id}`
@@ -234,7 +238,7 @@
         <div class="w-44">
           <Select
             label="Provider"
-            bind:value={customProvider}
+            bind:value={providerFilter}
             options={[
               { value: '', label: 'All providers' },
               ...providers.map((p) => ({ value: String(p.id), label: p.displayName })),
@@ -246,6 +250,7 @@
           <TextField
             label="Search name"
             placeholder="gpt, claude, …"
+            bind:value={searchQuery}
             oninput={onSearchInput}
           />
         </div>

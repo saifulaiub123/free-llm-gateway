@@ -37,6 +37,48 @@ import { ModelQuerySchema } from './dto/model-query.schema.js';
 import type { ModelQuery } from './dto/model-query.schema.js';
 import { modelFilterConfig, modelSortableColumns } from './dto/model-query.schema.js';
 
+/**
+ * Composed Swagger decorator for the list() query parameters.
+ *
+ * WHY manual composition over `applyDecorators`: `@nestjs/swagger` decorators
+ * rely on `Reflect.defineMetadata` at decoration time, and `applyDecorators`
+ * from `@nestjs/common` can interfere with that in test/vite environments.
+ * Manually chaining the decorator factories avoids the issue.
+ */
+function ApiQueryModelsList(): MethodDecorator {
+  return (target, propertyKey, descriptor) => {
+    ApiQuery({
+      name: 'page',
+      type: Number,
+      required: false,
+      example: 1,
+      description: 'Page number (1-based).',
+    })(target, propertyKey, descriptor);
+    ApiQuery({
+      name: 'per_page',
+      type: Number,
+      required: false,
+      example: 20,
+      description: 'Items per page (max 100).',
+    })(target, propertyKey, descriptor);
+    ApiQuery({
+      name: 'filter',
+      type: String,
+      required: false,
+      description:
+        'JSON filter object. See @ApiOperation description for filterable columns and operators.',
+      example: '{"enabled":true,"displayName__like":"gpt"}',
+    })(target, propertyKey, descriptor);
+    ApiQuery({
+      name: 'sort',
+      type: String,
+      required: false,
+      description: 'Column name and direction. See @ApiOperation for sortable columns.',
+      example: 'displayName:asc',
+    })(target, propertyKey, descriptor);
+  };
+}
+
 /** On-demand model discovery + per-user model catalog. JWT-guarded management API. */
 @ApiTags('models')
 @ApiBearerAuth('jwt')
@@ -114,35 +156,7 @@ export class ModelsController {
     `,
   })
   @ApiOkResponse({ type: ModelPageDto })
-  @ApiQuery({
-    name: 'page',
-    type: Number,
-    required: false,
-    example: 1,
-    description: 'Page number (1-based).',
-  })
-  @ApiQuery({
-    name: 'per_page',
-    type: Number,
-    required: false,
-    example: 20,
-    description: 'Items per page (max 100).',
-  })
-  @ApiQuery({
-    name: 'filter',
-    type: String,
-    required: false,
-    description:
-      'JSON filter object. See @ApiOperation description for filterable columns and operators.',
-    example: '{"enabled":true,"displayName__like":"gpt"}',
-  })
-  @ApiQuery({
-    name: 'sort',
-    type: String,
-    required: false,
-    description: 'Column name and direction. See @ApiOperation for sortable columns.',
-    example: 'displayName:asc',
-  })
+  @ApiQueryModelsList()
   list(
     @CurrentUser() user: Principal,
     @Query(new ZodValidationPipe(ModelQuerySchema)) query: ModelQuery,
