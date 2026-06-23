@@ -20,8 +20,33 @@
   let busy = $state(false);
   let showCreateForm = $state(false);
 
-  const load = (): Promise<[StrategyView[], ModelView[], Provider[]]> =>
-    Promise.all([strategiesApi.list(), modelsApi.list(), providersApi.list()]);
+  // 🔁 No modelsApi.list() — load only strategies + providers
+  const load = (): Promise<[StrategyView[], Provider[]]> =>
+    Promise.all([strategiesApi.list(), providersApi.list()]);
+
+  // 🔁 Per-strategy model cache (Map<strategyId, ModelView[]>)
+  let modelCache = $state<Map<number, ModelView[]>>(new Map());
+  let cacheLoading = $state(false);
+
+  /** Fetch enabled models for a strategy, using cache if available. */
+  async function loadModelsForStrategy(strategyId: number): Promise<ModelView[]> {
+    const cached = modelCache.get(strategyId);
+    if (cached) return cached;
+
+    cacheLoading = true;
+    try {
+      const page = await modelsApi.query({
+        filter: { enabled: true },
+        per_page: 200,
+      });
+      const models = page.items;
+      // Update cache immutably
+      modelCache = new Map(modelCache).set(strategyId, models);
+      return models;
+    } finally {
+      cacheLoading = false;
+    }
+  }
 
   function resolveSelected(strategies: StrategyView[]): StrategyView | undefined {
     return (
@@ -79,23 +104,13 @@
     await strategiesApi.setDefault(id);
     reload();
   }
-
-  const modelCount = (strategy: StrategyView, allModels: ModelView[]): number => {
-    // For manual mode, count models with positions in config.order or simply all enabled
-    if (strategy.type === 'manual') {
-      return allModels.filter((m) => m.enabled).length;
-    }
-    // All enabled models are candidates for auto strategies
-    return allModels.filter((m) => m.enabled).length;
-  };
 </script>
 
 <PageHeader title="Routing strategies" description="Pick how the gateway orders fallback candidates. The default strategy is used when a request sends no override header." />
 
 <Async {load}>
-  {#snippet children([strategies, models, providers], reload)}
+  {#snippet children([strategies, providers], reload)}
     {@const selected = resolveSelected(strategies)}
-    {@const enabledModels = models.filter((m) => m.enabled)}
     <div class="flex gap-6">
       <!-- Left sidebar: ultra-compact strategy list -->
       <div class="w-60 shrink-0 space-y-3">
@@ -152,13 +167,13 @@
               {#if strategy.isDefault}
                 <Badge tone="success" dot />
               {/if}
-              <span class="shrink-0 tabular-nums text-muted">{modelCount(strategy, models)} models</span>
+              <span class="shrink-0 tabular-nums text-muted">enabled</span>
             </button>
           {/each}
         </div>
       </div>
 
-      <!-- Right: config panel -->
+      <!-- Right: config panel with per-click model loading -->
       <div class="min-w-0 flex-1">
         {#if selected}
           <Card>
@@ -176,7 +191,15 @@
               {/if}
             </div>
             {#key selected.id}
-              <StrategyConfigPanel strategy={selected} models={enabledModels} {providers} onsaved={reload} />
+              {#if cacheLoading}
+                <div class="flex h-40 items-center justify-center text-sm text-muted">
+                  Loading models…
+                </div>
+              {:else}
+                {#await loadModelsForStrategy(selected.id) then models}
+                  <StrategyConfigPanel strategy={selected} {models} {providers} onsaved={reload} />
+                {/await}
+              {/if}
             {/key}
           </Card>
         {:else}
