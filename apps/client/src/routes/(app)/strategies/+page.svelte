@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { modelsApi, strategiesApi } from '$lib/api';
+  import { modelsApi, providersApi, strategiesApi } from '$lib/api';
   import { ApiError } from '$lib/api/error';
-  import type { ModelView, StrategyType, StrategyView } from '$lib/api/types';
+  import type { ModelView, Provider, StrategyType, StrategyView } from '$lib/api/types';
   import Async from '$lib/components/Async.svelte';
   import StrategyConfigPanel from '$lib/components/StrategyConfigPanel.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
@@ -19,8 +19,8 @@
   let error = $state('');
   let busy = $state(false);
 
-  const load = (): Promise<[StrategyView[], ModelView[]]> =>
-    Promise.all([strategiesApi.list(), modelsApi.list()]);
+  const load = (): Promise<[StrategyView[], ModelView[], Provider[]]> =>
+    Promise.all([strategiesApi.list(), modelsApi.list(), providersApi.list()]);
 
   function resolveSelected(strategies: StrategyView[]): StrategyView | undefined {
     return (
@@ -58,7 +58,7 @@
 <PageHeader title="Routing strategies" description="Pick how the gateway orders fallback candidates. The default strategy is used when a request sends no override header." />
 
 <Async {load}>
-  {#snippet children([strategies, models], reload)}
+  {#snippet children([strategies, models, providers], reload)}
     {@const selected = resolveSelected(strategies)}
     {@const enabledModels = models.filter((m) => m.enabled)}
     <div class="grid gap-6 lg:grid-cols-[22rem_1fr]">
@@ -108,7 +108,7 @@
           <h2 class="mb-1 text-lg font-semibold">{selected.name}</h2>
           <p class="mb-4 text-xs text-muted">{selected.type.replace('_', ' ')} strategy</p>
           {#key selected.id}
-            <StrategyConfigPanel strategy={selected} models={enabledModels} onsaved={reload} />
+            <StrategyConfigPanel strategy={selected} models={enabledModels} {providers} onsaved={reload} />
           {/key}
         {:else}
           <p class="text-sm text-muted">Create a strategy to configure routing.</p>

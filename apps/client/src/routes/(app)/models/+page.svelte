@@ -13,6 +13,7 @@
   import { formatCurrency } from '$lib/format';
 
   let fetchKeyId = $state('');
+  let modelFilter = $state('');
   let notice = $state('');
   let error = $state('');
   let busy = $state(false);
@@ -87,8 +88,20 @@
 
 <Async {load}>
   {#snippet children([models, providers, keys], reload)}
-    {@const providerName = (id: number) =>
-      providers.find((p) => p.id === id)?.displayName ?? `Provider #${id}`}
+    {@const providerName = (id: number | null) =>
+      id != null
+        ? providers.find((p) => p.id === id)?.displayName ?? `Provider #${id}`
+        : ''}
+    {@const filteredModels = modelFilter
+      ? models.filter((m) => {
+          const q = modelFilter.toLowerCase();
+          return (
+            m.displayName.toLowerCase().includes(q) ||
+            m.modelId.toLowerCase().includes(q) ||
+            providerName(m.providerId).toLowerCase().includes(q)
+          );
+        })
+      : models}
     <div class="space-y-6">
       <Card>
         <h2 class="mb-3 text-sm font-semibold">Fetch free models</h2>
@@ -136,6 +149,21 @@
         {/if}
       </Card>
 
+      <div class="flex items-center gap-3">
+        <div class="w-80">
+          <TextField
+            label="Search models"
+            placeholder="Name, model id, or provider…"
+            bind:value={modelFilter}
+          />
+        </div>
+        {#if modelFilter}
+          <span class="text-xs text-muted">
+            {filteredModels.length} of {models.length} models match
+          </span>
+        {/if}
+      </div>
+
       <div class="overflow-x-auto rounded-lg border border-border">
         <table class="w-full text-left text-sm">
           <thead class="bg-surface text-muted">
@@ -149,7 +177,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each models as model (model.userModelId)}
+            {#each filteredModels as model (model.userModelId)}
               <tr class="border-t border-border">
                 <td class="px-4 py-2">
                   <span class="font-medium">{model.displayName}</span>

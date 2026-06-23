@@ -1,12 +1,13 @@
 <script lang="ts">
   import { strategiesApi } from '$lib/api';
   import { ApiError } from '$lib/api/error';
-  import type { ModelView, StrategyView } from '$lib/api/types';
+  import type { ModelView, Provider, StrategyView } from '$lib/api/types';
   import { untrack } from 'svelte';
   import DragList from '$lib/components/DragList.svelte';
   import MetricBadge from '$lib/components/MetricBadge.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Select from '$lib/components/ui/Select.svelte';
+  import TextField from '$lib/components/ui/TextField.svelte';
   import { formatCurrency } from '$lib/format';
 
   interface Props {
@@ -15,10 +16,12 @@
     strategy: StrategyView;
     /** The user's enabled models, used as the orderable candidate set. */
     models: ModelView[];
+    /** Catalog providers used to resolve provider names. */
+    providers: Provider[];
     onsaved: () => void;
   }
 
-  let { strategy, models, onsaved }: Props = $props();
+  let { strategy, models, providers, onsaved }: Props = $props();
 
   type Weights = {
     cost: number;
@@ -56,9 +59,32 @@
     })),
   );
   let manualMode = $state(untrack(() => (strategy.config.manualMode as string) ?? 'fixed'));
+  let filterText = $state('');
   let message = $state('');
   let error = $state('');
   let busy = $state(false);
+
+  const providerById = $derived(
+    providers.reduce(
+      (map, p) => map.set(p.id, p),
+      new Map<number, Provider>(),
+    ),
+  );
+
+  const filteredOrder = $derived(
+    filterText
+      ? order.filter((model) => {
+          const q = filterText.toLowerCase();
+          const providerName = model.providerId != null
+            ? (providerById.get(model.providerId)?.displayName ?? '')
+            : '';
+          return (
+            model.displayName.toLowerCase().includes(q) ||
+            providerName.toLowerCase().includes(q)
+          );
+        })
+      : order,
+  );
 
   async function run(action: () => Promise<unknown>, ok: string): Promise<void> {
     message = '';
@@ -112,14 +138,20 @@
     {#if manualMode === 'fixed'}
       <div class="space-y-3">
         <p class="text-sm text-muted">Drag to set the fixed fallback order.</p>
+        <TextField label="Filter models" placeholder="Name or provider…" bind:value={filterText} />
         <DragList
-          items={order}
+          items={filteredOrder}
           getId={(model) => model.userModelId}
           onreorder={(next) => (order = next)}
         >
           {#snippet row(model)}
             <div class="flex flex-wrap items-center gap-2">
               <span class="font-medium">{model.displayName}</span>
+              {#if model.providerId != null}
+                <span class="text-xs text-muted">
+                  ({providerById.get(model.providerId)?.displayName ?? 'Unknown'})
+                </span>
+              {/if}
               <MetricBadge label="intel" value={String(model.intelligenceScore)} />
               <MetricBadge label="tier" value={model.speedTier} />
               <MetricBadge label="in" value={formatCurrency(model.inputCostPer1m)} />
