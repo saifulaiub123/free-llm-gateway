@@ -24,26 +24,17 @@
   const load = (): Promise<[StrategyView[], Provider[]]> =>
     Promise.all([strategiesApi.list(), providersApi.list()]);
 
-  // 🔁 Script-level tracking of Async data so $effect can react to it
-  let allStrategies = $state<StrategyView[]>([]);
-  let allProviders = $state<Provider[]>([]);
-
-  // 🔁 Per-strategy model cache — loaded via $effect, not from template
-  let modelCache = $state<Map<number, ModelView[]>>(new Map());
+  // 🔁 Per-strategy model cache — non-reactive Map (lookup only, not rendered)
+  const modelCache = new Map<number, ModelView[]>();
   let selectedModels = $state<ModelView[]>([]);
   let modelsLoading = $state(false);
 
-  // When the selected strategy changes, load models from cache or API.
+  // When selectedId changes, load models from cache or API.
   // WHY $effect instead of {#await}: Svelte 5 forbids mutating $state inside
   // template expressions (state_unsafe_mutation).
   $effect(() => {
     const id = selectedId;
-    const strategies = allStrategies;
-    if (!strategies.length || id === null) return;
-
-    // Resolve strategy to verify it exists
-    const strategy = resolveSelected(strategies);
-    if (!strategy) return;
+    if (id === null) return;
 
     const cached = modelCache.get(id);
     if (cached) {
@@ -59,7 +50,7 @@
           filter: { enabled: true },
           per_page: 200,
         });
-        modelCache = new Map(modelCache).set(id, page.items);
+        modelCache.set(id, page.items);
         selectedModels = page.items;
       } finally {
         modelsLoading = false;
@@ -128,17 +119,7 @@
 <PageHeader title="Routing strategies" description="Pick how the gateway orders fallback candidates. The default strategy is used when a request sends no override header." />
 
 <Async {load}>
-  {#snippet children(data, reload)}
-    {@const strategies = data[0] as StrategyView[]}
-    {@const providers = data[1] as Provider[]}
-    <!-- Sync script-level state so $effect can react to strategy changes -->
-    {#if allStrategies !== strategies}
-      {(() => {
-        allStrategies = strategies;
-        allProviders = providers;
-        return '';
-      })()}
-    {/if}
+  {#snippet children([strategies, providers], reload)}
     {@const selected = resolveSelected(strategies)}
     <div class="flex gap-6">
       <!-- Left sidebar: ultra-compact strategy list -->
