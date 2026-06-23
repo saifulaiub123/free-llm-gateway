@@ -18,6 +18,7 @@
   let newName = $state('');
   let error = $state('');
   let busy = $state(false);
+  let showCreateForm = $state(false);
 
   const load = (): Promise<[StrategyView[], ModelView[], Provider[]]> =>
     Promise.all([strategiesApi.list(), modelsApi.list(), providersApi.list()]);
@@ -28,6 +29,30 @@
       strategies.find((s) => s.isDefault) ??
       strategies[0]
     );
+  }
+
+  /** Get a short human-readable description of the strategy's type. */
+  function typeDesc(type: StrategyType): string {
+    const map: Record<StrategyType, string> = {
+      manual: 'Drag order',
+      free_first: 'Free first',
+      balanced: 'Weighted score',
+      fastest: 'Fastest',
+      smart: 'Smart',
+    };
+    return map[type];
+  }
+
+  /** Get the strategy type's icon (emoji as inline SVG alternative — use a simple label). */
+  function typeIcon(type: StrategyType): string {
+    const map: Record<StrategyType, string> = {
+      manual: '⇅',
+      free_first: '🆓',
+      balanced: '⚖',
+      fastest: '⚡',
+      smart: '🧠',
+    };
+    return map[type];
   }
 
   async function create(reload: () => void): Promise<void> {
@@ -41,6 +66,7 @@
       const created = await strategiesApi.create(newType, newName.trim());
       newName = '';
       selectedId = created.id;
+      showCreateForm = false;
       reload();
     } catch (err) {
       error = err instanceof ApiError ? err.message : 'Failed to create strategy.';
@@ -53,6 +79,15 @@
     await strategiesApi.setDefault(id);
     reload();
   }
+
+  const modelCount = (strategy: StrategyView, allModels: ModelView[]): number => {
+    // For manual mode, count models with positions in config.order or simply all enabled
+    if (strategy.type === 'manual') {
+      return allModels.filter((m) => m.enabled).length;
+    }
+    // All enabled models are candidates for auto strategies
+    return allModels.filter((m) => m.enabled).length;
+  };
 </script>
 
 <PageHeader title="Routing strategies" description="Pick how the gateway orders fallback candidates. The default strategy is used when a request sends no override header." />
@@ -61,59 +96,95 @@
   {#snippet children([strategies, models, providers], reload)}
     {@const selected = resolveSelected(strategies)}
     {@const enabledModels = models.filter((m) => m.enabled)}
-    <div class="grid gap-6 lg:grid-cols-[22rem_1fr]">
-      <div class="space-y-4">
-        <Card>
-          <h2 class="mb-3 text-sm font-semibold">Create strategy</h2>
-          <div class="space-y-3">
-            <Select
-              label="Type"
-              bind:value={newType}
-              options={TYPES.map((type) => ({ value: type, label: type.replace('_', ' ') }))}
-            />
-            <TextField label="Name" bind:value={newName} placeholder="My balanced router" />
-            {#if error}
-              <p class="text-sm text-red-500">{error}</p>
-            {/if}
-            <Button full disabled={busy} onclick={() => create(reload)}>Create</Button>
-          </div>
-        </Card>
-
-        <div class="space-y-2">
-          {#each strategies as strategy (strategy.id)}
-            <Card class="cursor-pointer {selected?.id === strategy.id ? 'border-primary' : ''}">
-              <button type="button" class="w-full text-left" onclick={() => (selectedId = strategy.id)}>
-                <div class="flex items-center justify-between">
-                  <span class="font-medium">{strategy.name}</span>
-                  {#if strategy.isDefault}
-                    <Badge tone="success">default</Badge>
-                  {/if}
-                </div>
-                <span class="text-xs text-muted">{strategy.type.replace('_', ' ')}</span>
+    <div class="flex gap-6">
+      <!-- Left sidebar: ultra-compact strategy list -->
+      <div class="w-60 shrink-0 space-y-3">
+        {#if showCreateForm}
+          <div class="rounded-lg border border-glass-border bg-surface/50 p-3">
+            <div class="mb-2 flex items-center justify-between">
+              <span class="text-xs font-semibold">New strategy</span>
+              <button type="button" aria-label="Close" class="text-muted hover:text-foreground" onclick={() => { showCreateForm = false; error = ''; }}>
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
               </button>
-              {#if !strategy.isDefault}
-                <div class="mt-2">
-                  <Button variant="ghost" onclick={() => makeDefault(strategy.id, reload)}>
-                    Set as default
-                  </Button>
-                </div>
+            </div>
+            <div class="space-y-2">
+              <Select
+                label="Type"
+                bind:value={newType}
+                options={TYPES.map((type) => ({ value: type, label: type.replace('_', ' ') }))}
+              />
+              <TextField label="Name" bind:value={newName} placeholder="My router" />
+              {#if error}
+                <p class="text-xs text-red-500">{error}</p>
               {/if}
-            </Card>
+              <div class="flex gap-2">
+                <Button size="sm" disabled={busy} onclick={() => create(reload)}>Create</Button>
+                <Button size="sm" variant="ghost" onclick={() => { showCreateForm = false; error = ''; }}>Cancel</Button>
+              </div>
+            </div>
+          </div>
+        {:else}
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 rounded-lg border border-dashed border-glass-border px-3 py-2 text-xs text-muted transition-colors hover:border-primary hover:text-primary"
+            onclick={() => showCreateForm = true}
+          >
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14m-7-7h14" />
+            </svg>
+            Create strategy
+          </button>
+        {/if}
+
+        <div class="space-y-1">
+          {#each strategies as strategy (strategy.id)}
+            <button
+              type="button"
+              class="flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-all {selected?.id === strategy.id
+                ? 'border-primary bg-primary/10 text-foreground'
+                : 'border-transparent text-muted hover:border-glass-border hover:bg-surface/50 hover:text-foreground'}"
+              onclick={() => (selectedId = strategy.id)}
+            >
+              <span class="shrink-0 text-xs leading-none">{typeIcon(strategy.type)}</span>
+              <span class="flex-1 truncate font-medium">{strategy.name}</span>
+              {#if strategy.isDefault}
+                <Badge tone="success" dot />
+              {/if}
+              <span class="shrink-0 tabular-nums text-muted">{modelCount(strategy, models)} models</span>
+            </button>
           {/each}
         </div>
       </div>
 
-      <Card>
+      <!-- Right: config panel -->
+      <div class="min-w-0 flex-1">
         {#if selected}
-          <h2 class="mb-1 text-lg font-semibold">{selected.name}</h2>
-          <p class="mb-4 text-xs text-muted">{selected.type.replace('_', ' ')} strategy</p>
-          {#key selected.id}
-            <StrategyConfigPanel strategy={selected} models={enabledModels} {providers} onsaved={reload} />
-          {/key}
+          <Card>
+            <div class="mb-4 flex items-center justify-between">
+              <div>
+                <h2 class="text-lg font-semibold">{selected.name}</h2>
+                <p class="text-xs text-muted">{typeDesc(selected.type)}</p>
+              </div>
+              {#if !selected.isDefault}
+                <Button variant="ghost" size="sm" onclick={() => makeDefault(selected.id, reload)}>
+                  Set as default
+                </Button>
+              {:else}
+                <Badge tone="success">default</Badge>
+              {/if}
+            </div>
+            {#key selected.id}
+              <StrategyConfigPanel strategy={selected} models={enabledModels} {providers} onsaved={reload} />
+            {/key}
+          </Card>
         {:else}
-          <p class="text-sm text-muted">Create a strategy to configure routing.</p>
+          <div class="flex h-40 items-center justify-center rounded-xl border border-dashed border-glass-border text-sm text-muted">
+            Create a strategy to configure routing.
+          </div>
         {/if}
-      </Card>
+      </div>
     </div>
   {/snippet}
 </Async>

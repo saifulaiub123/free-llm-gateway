@@ -92,7 +92,7 @@
       id != null
         ? providers.find((p) => p.id === id)?.displayName ?? `Provider #${id}`
         : ''}
-    {@const filteredModels = modelFilter
+    {@const filteredModels = (modelFilter
       ? models.filter((m) => {
           const q = modelFilter.toLowerCase();
           return (
@@ -101,7 +101,8 @@
             providerName(m.providerId).toLowerCase().includes(q)
           );
         })
-      : models}
+      : models
+    ).toSorted((a, b) => (a.enabled === b.enabled ? 0 : a.enabled ? -1 : 1))}
     <div class="space-y-6">
       <Card title="Fetch free models">
         {#snippet children()}

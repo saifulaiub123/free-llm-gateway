@@ -5,7 +5,7 @@
     tone?: 'neutral' | 'success' | 'warning' | 'danger';
     /** Show a colored dot indicator before the text */
     dot?: boolean;
-    children: Snippet;
+    children?: Snippet;
   }
 
   let { tone = 'neutral', dot = false, children }: Props = $props();
@@ -36,5 +36,7 @@
   {#if dot}
     <span class="inline-block h-1.5 w-1.5 rounded-full {tones[tone].dot}"></span>
   {/if}
-  {@render children()}
+  {#if children}
+    {@render children()}
+  {/if}
 </span>

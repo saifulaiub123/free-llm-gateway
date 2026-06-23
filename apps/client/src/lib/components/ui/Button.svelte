@@ -4,6 +4,7 @@
   interface Props {
     type?: 'button' | 'submit';
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+    size?: 'sm' | 'md';
     disabled?: boolean;
     full?: boolean;
     onclick?: () => void;
@@ -13,6 +14,7 @@
   let {
     type = 'button',
     variant = 'primary',
+    size = 'md',
     disabled = false,
     full = false,
     onclick,
@@ -35,9 +37,10 @@
   {type}
   {disabled}
   {onclick}
-  class="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 {variants[
-    variant
-  ]} {full ? 'w-full' : ''}"
+  class="inline-flex items-center justify-center rounded-lg font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 {size ===
+  'sm'
+    ? 'px-2 py-1 text-xs'
+    : 'px-3 py-1.5 text-sm'} {variants[variant]} {full ? 'w-full' : ''}"
 >
   {@render children()}
 </button>

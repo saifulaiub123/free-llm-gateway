@@ -26,15 +26,15 @@
       {id}
       bind:value
       onchange={(event) => onchange?.(event.currentTarget.value)}
-      class="w-full appearance-none rounded-lg border bg-surface px-3 py-2 pr-8 text-sm font-sans outline-none transition-all duration-150 focus:border-primary focus:shadow-[0_0_0_3px] focus:shadow-primary/20 {value
+      class="w-full appearance-none rounded-lg border border-border bg-surface px-3 py-2 pr-8 text-sm font-sans text-foreground outline-none transition-all duration-150 focus:border-primary focus:shadow-[0_0_0_3px] focus:shadow-primary/20 {value
         ? ''
         : 'text-muted/60'}"
     >
       {#if placeholder}
-        <option value="" disabled>{placeholder}</option>
+        <option value="" disabled style="color: var(--theme-muted)">{placeholder}</option>
       {/if}
       {#each options as option (option.value)}
-        <option value={option.value}>{option.label}</option>
+        <option value={option.value} style="color: var(--theme-foreground); background: var(--theme-background)">{option.label}</option>
       {/each}
     </select>
     <!-- Custom chevron -->

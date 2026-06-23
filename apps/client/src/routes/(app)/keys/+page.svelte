@@ -53,29 +53,35 @@
   {#snippet children([providers, keys], reload)}
     {@const nameOf = (id: number) =>
       providers.find((p) => p.id === id)?.displayName ?? `Provider #${id}`}
-    <div class="grid gap-6 lg:grid-cols-[20rem_1fr]">
-      <Card title="Add a key">
+    <div class="space-y-6">
+      <Card title="Add a key" class="!p-4">
         {#snippet children()}
-          <div class="space-y-3">
-            <Select
-              label="Provider"
-              bind:value={providerKey}
-              options={providers.map((p) => ({ value: p.key, label: p.displayName }))}
-            />
-            <TextField label="API key" type="password" bind:value={apiKey} placeholder="sk-…" />
-            <TextField label="Label (optional)" bind:value={label} placeholder="prod-key-1" />
-            {#if error}
-              <div class="flex items-start gap-2 rounded-lg bg-danger/10 p-3 text-sm text-danger">
-                <svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {error}
-              </div>
-            {/if}
-            <Button full disabled={busy} onclick={() => addKey(reload)}>
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="w-44">
+              <Select
+                label="Provider"
+                bind:value={providerKey}
+                options={providers.map((p) => ({ value: p.key, label: p.displayName }))}
+              />
+            </div>
+            <div class="min-w-48 flex-1">
+              <TextField label="API key" type="password" bind:value={apiKey} placeholder="sk-…" />
+            </div>
+            <div class="w-44">
+              <TextField label="Label (optional)" bind:value={label} placeholder="prod-key-1" />
+            </div>
+            <Button disabled={busy} onclick={() => addKey(reload)}>
               {busy ? 'Validating…' : 'Add key'}
             </Button>
           </div>
+          {#if error}
+            <div class="mt-3 flex items-start gap-2 rounded-lg bg-danger/10 p-3 text-sm text-danger">
+              <svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {error}
+            </div>
+          {/if}
         {/snippet}
       </Card>
 

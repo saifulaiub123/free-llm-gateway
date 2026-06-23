@@ -4,6 +4,7 @@
   import type { ModelView, Provider, StrategyView } from '$lib/api/types';
   import { untrack } from 'svelte';
   import DragList from '$lib/components/DragList.svelte';
+  import ModelOrderList from '$lib/components/ModelOrderList.svelte';
   import MetricBadge from '$lib/components/MetricBadge.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Select from '$lib/components/ui/Select.svelte';
@@ -120,6 +121,9 @@
 
   const saveWeights = () =>
     run(() => strategiesApi.setConfig(strategy.id, { weights }), 'Weights saved.');
+
+  /** Sorted models by their intelligence score (desc) as a hint of the automatic ordering. */
+  const sortedByIntel = $derived([...models].sort((a, b) => b.intelligenceScore - a.intelligenceScore));
 </script>
 
 <div class="space-y-5">
@@ -160,6 +164,12 @@
         </DragList>
         <Button disabled={busy} onclick={saveOrder}>Save order</Button>
       </div>
+    {:else}
+      <!-- Non-fixed manual modes also need a visual model list -->
+      <div>
+        <p class="mb-2 text-xs font-semibold text-muted">Routing order</p>
+        <ModelOrderList {models} {providerById} />
+      </div>
     {/if}
   {:else if strategy.type === 'balanced'}
     <div class="space-y-3">
@@ -175,10 +185,36 @@
       </div>
       <Button disabled={busy} onclick={saveWeights}>Save weights</Button>
     </div>
-  {:else}
-    <p class="text-sm text-muted">
-      The {strategy.type.replace('_', ' ')} strategy sorts candidates automatically by its single metric — no manual configuration.
-    </p>
+
+    <!-- Show model list sorted by intelligence (approximating weighted score) -->
+    <div>
+      <p class="mb-2 text-xs font-semibold text-muted">Routing order (approx. by intelligence score)</p>
+      <ModelOrderList models={sortedByIntel} {providerById} />
+    </div>
+  {:else if strategy.type === 'free_first'}
+    <div>
+      <p class="mb-2 text-xs font-semibold text-muted">Routing order (free models first, then cheapest)</p>
+      <ModelOrderList
+        models={[...models].sort((a, b) => Number(a.isFree) < Number(b.isFree) ? 1 : Number(a.isFree) > Number(b.isFree) ? -1 : a.inputCostPer1m - b.inputCostPer1m)}
+        {providerById}
+      />
+    </div>
+  {:else if strategy.type === 'fastest'}
+    <div>
+      <p class="mb-2 text-xs font-semibold text-muted">Routing order (fastest tier first)</p>
+      <ModelOrderList
+        models={[...models].sort((a, b) => a.speedTier.localeCompare(b.speedTier))}
+        {providerById}
+      />
+    </div>
+  {:else if strategy.type === 'smart'}
+    <div>
+      <p class="mb-2 text-xs font-semibold text-muted">Routing order (highest intelligence first)</p>
+      <ModelOrderList
+        models={sortedByIntel}
+        {providerById}
+      />
+    </div>
   {/if}
 
   {#if message}
