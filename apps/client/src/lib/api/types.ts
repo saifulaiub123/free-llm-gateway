@@ -184,3 +184,34 @@ export interface AdminUserPage {
   items: AdminUser[];
   nextCursor: number | null;
 }
+
+// ── Queryable models (pagination/filter/sort) ────────────────────────
+
+/** A paginated page of models. */
+export interface ModelPage {
+  items: ModelView[];
+  page: number;
+  perPage: number;
+  total: number;
+}
+
+/** Column operator config — mirrors server's FilterColumnInfoDto. */
+export interface FilterColumnInfo {
+  field: string;
+  operators: string[];
+}
+
+/** Sortable column config. */
+export interface SortColumnInfo {
+  field: string;
+  defaultDirection: string;
+}
+
+/** Response from GET /api/v1/models/query-config. */
+export interface ModelQueryInfo {
+  filterableColumns: FilterColumnInfo[];
+  sortableColumns: SortColumnInfo[];
+  defaultPage: number;
+  defaultPerPage: number;
+  maxPerPage: number;
+}

@@ -7,6 +7,8 @@ import type {
   FetchModelsResult,
   GlobalSetting,
   LogPage,
+  ModelPage,
+  ModelQueryInfo,
   ModelView,
   Provider,
   ProviderKey,
@@ -33,7 +35,22 @@ export const providersApi = {
 
 /** Model catalog + per-user enable/disable + custom models (`/api/v1/models`). */
 export const modelsApi = {
-  list: () => apiFetch<ModelView[]>('/models'),
+  /**
+   * Query models with dynamic filter, sort, and pagination — replaces old list().
+   *
+   * @param params Optional filter/sort/page params. Setting `page` or `per_page` overrides defaults.
+   */
+  query: (params?: { page?: number; per_page?: number; filter?: Record<string, unknown>; sort?: string }) =>
+    apiFetch<ModelPage>('/models', {
+      query: {
+        page: params?.page,
+        per_page: params?.per_page,
+        sort: params?.sort,
+        filter: params?.filter ? JSON.stringify(params.filter) : undefined,
+      },
+    }),
+  /** Fetch the query config (filterable/sortable columns) for building filter UIs. */
+  getQueryConfig: () => apiFetch<ModelQueryInfo>('/models/query-config'),
   fetchForKey: (keyId: number) =>
     apiFetch<FetchModelsResult>(`/providers/keys/${keyId}/fetch-models`, { method: 'POST' }),
   update: (userModelId: number, patch: { enabled?: boolean; overrides?: Record<string, unknown> }) =>
