@@ -22,11 +22,12 @@ export class RefreshTokenService {
   async issue(userId: number, ctx?: RequestContext, familyId?: string): Promise<string> {
     const token = randomBytes(32).toString('base64url');
     const ttlMs = parseDuration(this.config.get<string>('JWT_REFRESH_TTL') ?? '30d');
+    const expiresAt = new Date(Date.now() + ttlMs);
     await this.repo.create({
       userId,
       tokenHash: this.hash(token),
       familyId: familyId ?? randomUUID(),
-      expiresAt: new Date(Date.now() + ttlMs),
+      expiresAt,
       createdByIp: ctx?.ip ?? null,
       userAgent: ctx?.userAgent ?? null,
     });

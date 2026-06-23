@@ -59,7 +59,7 @@ function ApiQueryModelsList(): MethodDecorator {
       type: Number,
       required: false,
       example: 20,
-      description: 'Items per page (max 100).',
+      description: 'Items per page (max 200).',
     })(target, propertyKey, descriptor);
     ApiQuery({
       name: 'filter',
@@ -123,7 +123,7 @@ export class ModelsController {
       sortableColumns,
       defaultPage: 1,
       defaultPerPage: 20,
-      maxPerPage: 100,
+      maxPerPage: 200,
     };
   }
 
