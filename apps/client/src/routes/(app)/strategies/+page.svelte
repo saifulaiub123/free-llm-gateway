@@ -34,12 +34,17 @@
   onMount(async () => {
     try {
       const [s, p] = await Promise.all([strategiesApi.list(), providersApi.list()]);
+      console.log('[StrategiesPage] onMount: strategies=', s.length, 'providers=', p.length);
       strategies = s;
       providers = p;
       // Auto-select the default or first strategy
       const best = s.find((x) => x.isDefault) ?? s[0];
-      if (best) selectedId = best.id;
+      if (best) {
+        console.log('[StrategiesPage] auto-select strategy id=', best.id, 'name=', best.name);
+        selectedId = best.id;
+      }
     } catch (err) {
+      console.error('[StrategiesPage] onMount error:', err);
       loadError = err instanceof ApiError ? err.message : 'Failed to load.';
     } finally {
       loading = false;
@@ -52,22 +57,28 @@
   $effect(() => {
     const id = selectedId;
     if (id === null) return;
+    console.log('[StrategiesPage] $effect: selectedId=', id);
 
     const cached = modelCache.get(id);
     if (cached) {
+      console.log('[StrategiesPage] cache hit, models=', cached.length);
       selectedModels = cached;
       return;
     }
 
     queueMicrotask(async () => {
       modelsLoading = true;
+      console.log('[StrategiesPage] fetching models for strategy id=', id);
       try {
         const page = await modelsApi.query({
           filter: { enabled: true },
           per_page: 200,
         });
+        console.log('[StrategiesPage] models loaded: items=', page.items.length, 'total=', page.total);
         modelCache.set(id, page.items);
         selectedModels = page.items;
+      } catch (err) {
+        console.error('[StrategiesPage] model fetch error:', err);
       } finally {
         modelsLoading = false;
       }

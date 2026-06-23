@@ -24,6 +24,9 @@
 
   let { strategy, models = [], providers, onsaved }: Props = $props();
 
+  // Log mount once (inside $effect to avoid svelte state_referenced_locally warning)
+  $effect(() => { console.log('[StrategyConfigPanel] mount: strategy.id=', strategy.id, 'type=', strategy.type, 'models.len=', models.length); });
+
   type Weights = {
     cost: number;
     intelligence: number;
@@ -54,6 +57,7 @@
 
   function initOrder(): ModelView[] {
     const sorted = [...models];
+    console.log('[StrategyConfigPanel] initOrder: models.length=', models.length, 'hasOrder=', strategy.modelOrder?.length ?? 0);
     if (strategy.modelOrder?.length > 0) {
       const orderMap = new Map(strategy.modelOrder.map((o) => [o.userModelId, o.position]));
       sorted.sort((a, b) => {
@@ -66,6 +70,19 @@
   }
 
   let order = $state<ModelView[]>(initOrder());
+
+  // 🔁 Re-init order when models populate after async load.
+  // WHY: $state initializer runs only once on mount, but models may be
+  // empty at mount time (parent loads them async). This effect re-runs
+  // initOrder whenever the models array reference changes.
+  $effect(() => {
+    const len = models.length;
+    // On first run len matches the initial value — skip to avoid duplicating init.
+    if (order.length === 0 && len > 0) {
+      console.log('[StrategyConfigPanel] $effect: models populated, re-init order. len=', len);
+      order = initOrder();
+    }
+  });
   let weights = $state<Weights>(
     untrack(() => ({
       ...DEFAULT_WEIGHTS,
