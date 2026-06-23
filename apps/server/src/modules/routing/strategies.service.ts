@@ -3,13 +3,22 @@ import { RoutingStrategyRepository } from './routing-strategy.repository.js';
 import type { StrategyType } from './types/routing-candidate.js';
 import { routingStrategies } from '../../database/index.js';
 
-/** A strategy view with its config parsed back into an object. */
+/** A single ordered position in a strategy's model order. */
+export interface StrategyModelOrderEntry {
+  userModelId: number;
+  position: number;
+  enabled: boolean;
+}
+
+/** A strategy view with its config parsed back into an object and its saved model order. */
 export interface StrategyView {
   id: number;
   type: string;
   name: string;
   config: Record<string, unknown>;
   isDefault: boolean;
+  /** Saved model order positions (empty array when none saved). */
+  modelOrder: StrategyModelOrderEntry[];
 }
 
 /** Strategy management (TASK-046): list/create/update, reorder, config, and default selection. */
@@ -17,9 +26,10 @@ export interface StrategyView {
 export class StrategiesService {
   constructor(private readonly repository: RoutingStrategyRepository) {}
 
-  /** Lists the user's strategies. */
+  /** Lists the user's strategies with their saved model order. */
   async list(userId: number): Promise<StrategyView[]> {
-    return (await this.repository.listByUser(userId)).map((row) => this.toView(row));
+    const rows = await this.repository.listByUser(userId);
+    return Promise.all(rows.map((row) => this.toView(row)));
   }
 
   /** Creates a strategy (config defaults to `{}`). */
@@ -77,14 +87,22 @@ export class StrategiesService {
     return { default: id };
   }
 
-  /** Maps a stored row to a view, parsing the JSON config. */
-  private toView(row: typeof routingStrategies.$inferSelect): StrategyView {
+  /** Maps a stored row to a view, parsing the JSON config and loading the saved model order. */
+  private async toView(row: typeof routingStrategies.$inferSelect): Promise<StrategyView> {
+    const positions = await this.repository.loadPositions(row.id);
+    const modelOrder: StrategyModelOrderEntry[] = [];
+    for (const [userModelId, position] of positions) {
+      modelOrder.push({ userModelId, position, enabled: true });
+    }
+    // Sort by position so the client receives them in order
+    modelOrder.sort((a, b) => a.position - b.position);
     return {
       id: row.id,
       type: row.type,
       name: row.name,
       config: JSON.parse(row.config) as Record<string, unknown>,
       isDefault: row.isDefault,
+      modelOrder,
     };
   }
 }

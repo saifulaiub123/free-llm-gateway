@@ -84,6 +84,13 @@ export interface ModelView {
 /** The routing strategy kinds. */
 export type StrategyType = 'manual' | 'free_first' | 'balanced' | 'fastest' | 'smart';
 
+/** One entry in a strategy's saved model order. */
+export interface StrategyModelOrderEntry {
+  userModelId: number;
+  position: number;
+  enabled: boolean;
+}
+
 /** A user's routing strategy. */
 export interface StrategyView {
   id: number;
@@ -91,6 +98,8 @@ export interface StrategyView {
   name: string;
   config: Record<string, unknown>;
   isDefault: boolean;
+  /** Saved model order positions (empty array when none saved). */
+  modelOrder: StrategyModelOrderEntry[];
 }
 
 /** One reorder entry for a strategy's model order. */

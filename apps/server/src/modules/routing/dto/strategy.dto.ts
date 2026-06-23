@@ -81,6 +81,22 @@ export class ReorderDto {
   items!: ReorderItemDto[];
 }
 
+/** One entry in a strategy's saved model order. */
+export class StrategyModelOrderEntryDto {
+  @ApiProperty()
+  @IsInt()
+  userModelId!: number;
+
+  @ApiProperty()
+  @IsInt()
+  @Min(0)
+  position!: number;
+
+  @ApiProperty()
+  @IsBoolean()
+  enabled!: boolean;
+}
+
 /** A routing strategy as returned to the dashboard (config parsed from storage). */
 export class StrategyDto {
   @ApiProperty() id!: number;
@@ -88,4 +104,7 @@ export class StrategyDto {
   @ApiProperty() name!: string;
   @ApiProperty({ type: Object }) config!: Record<string, unknown>;
   @ApiProperty() isDefault!: boolean;
+  /** Saved model order positions (empty array when none saved). */
+  @ApiProperty({ type: [StrategyModelOrderEntryDto] })
+  modelOrder!: StrategyModelOrderEntryDto[];
 }

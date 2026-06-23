@@ -52,7 +52,20 @@
     'availability',
   ];
 
-  let order = $state<ModelView[]>(untrack(() => [...models]));
+  function initOrder(): ModelView[] {
+    const sorted = [...models];
+    if (strategy.modelOrder?.length > 0) {
+      const orderMap = new Map(strategy.modelOrder.map((o) => [o.userModelId, o.position]));
+      sorted.sort((a, b) => {
+        const pa = orderMap.get(a.userModelId) ?? 999;
+        const pb = orderMap.get(b.userModelId) ?? 999;
+        return pa - pb;
+      });
+    }
+    return sorted;
+  }
+
+  let order = $state<ModelView[]>(initOrder());
   let weights = $state<Weights>(
     untrack(() => ({
       ...DEFAULT_WEIGHTS,

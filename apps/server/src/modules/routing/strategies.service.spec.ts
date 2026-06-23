@@ -23,12 +23,14 @@ function build(
         ? overrides.updateOwned
         : { id: 1, type: 'balanced', name: 'B', config: '{}', isDefault: false },
     );
+  const loadPositions = vi.fn().mockResolvedValue(new Map<number, number>());
   const replaceOrder = vi.fn().mockResolvedValue(overrides.replaceOrder ?? true);
   const setDefault = vi.fn().mockResolvedValue(overrides.setDefault ?? true);
   const repository = {
     createForUser,
     listByUser,
     updateOwned,
+    loadPositions,
     replaceOrder,
     setDefault,
   } as unknown as RoutingStrategyRepository;
