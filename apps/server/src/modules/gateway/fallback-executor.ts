@@ -91,7 +91,7 @@ export class FallbackExecutor {
         this.stats.recordOutcome(userId, candidate.modelId, true, Date.now() - startedAt);
         return {
           response,
-          routedVia: `${candidate.providerKey}/${candidate.modelId}`,
+          routedVia: `${candidate.providerKey}/${candidate.upstreamModelId}`,
           attempts: attempts - 1, // number of fallbacks before this success
         };
       } catch (error) {
@@ -155,7 +155,7 @@ export class FallbackExecutor {
         this.stats.recordOutcome(userId, candidate.modelId, true, Date.now() - startedAt);
         return {
           stream: this.continueStream(first, iterator),
-          routedVia: `${candidate.providerKey}/${candidate.modelId}`,
+          routedVia: `${candidate.providerKey}/${candidate.upstreamModelId}`,
           attempts: attempts - 1,
         };
       } catch (error) {

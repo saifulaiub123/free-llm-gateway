@@ -47,7 +47,7 @@ describe('RequestLoggingService.record (TASK-055)', () => {
     await service.record(
       baseContext({
         eligible: [free, paid],
-        routedVia: 'groq/1',
+        routedVia: 'groq/model-1',
         fallbackAttempts: 0,
         usage: { prompt_tokens: 400, completion_tokens: 600, total_tokens: 1000 },
       }),
@@ -55,7 +55,7 @@ describe('RequestLoggingService.record (TASK-055)', () => {
 
     const row = create.mock.calls[0]?.[0];
     expect(row.routedProvider).toBe('groq');
-    expect(row.routedModel).toBe('1');
+    expect(row.routedModel).toBe('model-1');
     expect(row.costEstimate).toBe(0);
     // baseline = 2 * 1000 / 1_000_000 = 0.002; saved = 0.002 - 0.
     expect(row.costSaved).toBeCloseTo(0.002, 6);

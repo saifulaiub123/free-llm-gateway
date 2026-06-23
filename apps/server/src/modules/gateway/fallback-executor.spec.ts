@@ -82,7 +82,7 @@ describe('FallbackExecutor (TEST-005)', () => {
     );
 
     expect(result.response).toBe(response);
-    expect(result.routedVia).toBe('provB/2');
+    expect(result.routedVia).toBe('provB/model-2');
     expect(result.attempts).toBe(1);
     expect(placeOnCooldown).toHaveBeenCalledWith({ keyId: 10 }, expect.any(Number), 'rate_limited');
     expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ keyId: 20 }), 10);
@@ -145,7 +145,7 @@ describe('FallbackExecutor.openStream (TEST-007)', () => {
       REQUEST,
     );
 
-    expect(result.routedVia).toBe('provB/2');
+    expect(result.routedVia).toBe('provB/model-2');
     expect(result.attempts).toBe(1);
     expect(placeOnCooldown).toHaveBeenCalledWith({ keyId: 10 }, expect.any(Number), 'rate_limited');
 
