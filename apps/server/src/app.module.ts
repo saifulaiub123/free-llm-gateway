@@ -1,9 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { validateEnv } from './config/env.schema.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { ProvidersModule } from './modules/providers/providers.module.js';
+import { ModelsModule } from './modules/models/models.module.js';
+import { RateLimitModule } from './modules/rate-limit/rate-limit.module.js';
+import { RoutingModule } from './modules/routing/routing.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
+import { AdminModule } from './modules/admin/admin.module.js';
+import { AnalyticsModule } from './modules/analytics/analytics.module.js';
+import { GatewayModule } from './modules/gateway/gateway.module.js';
+import { TokensModule } from './modules/tokens/tokens.module.js';
 import { StaticModule } from './static/static.module.js';
 
 /**
@@ -22,9 +32,19 @@ import { StaticModule } from './static/static.module.js';
       envFilePath: ['.env', '../../.env'],
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     StaticModule.register(),
     AuthModule,
+    TokensModule,
+    ProvidersModule,
+    ModelsModule,
+    RateLimitModule,
+    RoutingModule,
+    SettingsModule,
+    AdminModule,
+    AnalyticsModule,
+    GatewayModule,
     HealthModule,
   ],
 })

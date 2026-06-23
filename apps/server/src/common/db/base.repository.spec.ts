@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { baseEntityColumns, createDb, type Db, type DbExecutor } from '@gateway/db';
+import { baseEntityColumns, createDb, type Db, type DatabaseService } from '../../database/index.js';
 import { BaseRepository } from './base.repository.js';
 
 // Throwaway entity for exercising the generic repository (composes the shared audit columns).
@@ -13,8 +13,8 @@ const testWidgets = sqliteTable('test_widgets', {
 
 /** Minimal soft-deletable repository over the test table, exposing `scopedToUser` for the test. */
 class TestWidgetRepository extends BaseRepository<typeof testWidgets> {
-  constructor(db: Db) {
-    super(db, testWidgets, true);
+  constructor(database: DatabaseService) {
+    super(database, testWidgets, true);
   }
 
   /** Public passthrough so the protected SEC-004 helper can be asserted directly. */
@@ -36,10 +36,15 @@ const CREATE_TABLE = sql`CREATE TABLE test_widgets (
 )`;
 
 /** A fresh in-memory SQLite db + the test table. `setup-env.ts` pins DB_DRIVER=sqlite, DB_URL=:memory:. */
-function freshDb(): Db {
+async function freshDb(): Promise<Db> {
   const db = createDb();
-  (db as unknown as DbExecutor).run(CREATE_TABLE);
+  await db.run(CREATE_TABLE);
   return db;
+}
+
+/** Wraps a raw client in a minimal {@link DatabaseService} stub so repositories can read `.db`. */
+function asDatabase(db: Db): DatabaseService {
+  return { db } as unknown as DatabaseService;
 }
 
 /**
@@ -49,8 +54,8 @@ function freshDb(): Db {
 describe('BaseRepository', () => {
   let repo: TestWidgetRepository;
 
-  beforeEach(() => {
-    repo = new TestWidgetRepository(freshDb());
+  beforeEach(async () => {
+    repo = new TestWidgetRepository(asDatabase(await freshDb()));
   });
 
   it('round-trips a row through create + findById', async () => {
@@ -99,11 +104,11 @@ describe('BaseRepository', () => {
 
   it('rejects softDelete on a table without baseEntityColumns', async () => {
     class HardRepo extends BaseRepository<typeof testWidgets> {
-      constructor(db: Db) {
-        super(db, testWidgets, false);
+      constructor(database: DatabaseService) {
+        super(database, testWidgets, false);
       }
     }
-    const hard = new HardRepo(freshDb());
+    const hard = new HardRepo(asDatabase(await freshDb()));
     const { id } = await hard.create({ userId: 1, name: 'x' });
 
     await expect(hard.softDelete(id)).rejects.toThrow();

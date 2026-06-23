@@ -3,14 +3,48 @@
  *
  * Mirrors the token set in `light.css` under the `[data-theme='dark']` selector. The theme store
  * toggles `data-theme` on `<html>`, so switching is instant and component styles never change.
+ *
+ * Dark mode glass surfaces use a darker base with lower opacity backgrounds — the backdrop-filter
+ * blur against a dark background creates a subtle "deep glass" effect. Accent and primary remain
+ * vivid for contrast.
  */
 
 [data-theme='dark'] {
-  --theme-background: oklch(0.21 0.03 257);
-  --theme-surface: oklch(0.27 0.03 257);
+  /* Base */
+  --theme-background: oklch(0.15 0.02 260);
+  --theme-surface: oklch(0.22 0.02 260 / 0.5);
   --theme-foreground: oklch(0.98 0.01 257);
-  --theme-muted: oklch(0.71 0.02 257);
-  --theme-border: oklch(0.37 0.03 257);
-  --theme-primary: oklch(0.7 0.16 264);
-  --theme-primary-foreground: oklch(0.21 0.03 257);
+  --theme-muted: oklch(0.65 0.02 257);
+  --theme-border: oklch(0.35 0.02 260);
+
+  /* Brand */
+  --theme-primary: oklch(0.68 0.18 264);
+  --theme-primary-foreground: oklch(0.15 0.02 260);
+
+  /* Accent (teal) */
+  --theme-accent: oklch(0.7 0.12 200);
+  --theme-accent-foreground: oklch(0.15 0.02 260);
+
+  /* Surface depth */
+  --theme-surface-raised: oklch(0.27 0.03 260 / 0.6);
+  --theme-surface-overlay: oklch(0 0 0 / 0.6);
+
+  /* Glass */
+  --theme-glass-border: oklch(1 1 0 / 0.08);
+
+  /* Gradient — subtle background wash for dark mode */
+  --theme-gradient-from: oklch(0.15 0.02 260);
+  --theme-gradient-to: oklch(0.15 0.02 240);
+
+  /* Shadows — more pronounced in dark */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.2);
+  --shadow-md: 0 4px 6px oklch(0 0 0 / 0.2), 0 1px 3px oklch(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px oklch(0 0 0 / 0.25), 0 4px 6px oklch(0 0 0 / 0.35);
+  --shadow-glass: 0 4px 20px oklch(0 0 0 / 0.3);
+
+  /* Border radius scale */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }

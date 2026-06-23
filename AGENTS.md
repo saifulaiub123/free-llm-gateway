@@ -16,7 +16,7 @@ build guides in [`../implementation/`](../implementation/README.md).
 
 - **Language**: TypeScript (strict mode). No JavaScript source files.
 - **Server**: NestJS 10+ (modules, providers, DI).
-- **ORM**: Drizzle ORM. Pluggable drivers: PostgreSQL (`pg`) and SQLite (`better-sqlite3`).
+- **ORM**: Drizzle ORM. Pluggable providers: PostgreSQL (`pg`) and SQLite (`@libsql/client`) — both async.
 - **Client**: SvelteKit 2 + Svelte 5 (runes) + Tailwind CSS v4.
 - **Identity**: first-party NestJS auth using `@nestjs/passport`, `passport-jwt`, `@nestjs/jwt`, `argon2`. No managed identity provider.
 - **Tests**: Vitest (server, adapters, packages). Supertest for HTTP integration.
@@ -32,9 +32,9 @@ Alternatives section and explicit human approval.
 ```
 apps/
   server/    NestJS API (management /api/v1 + gateway /v1)
+    src/database/  Drizzle schema, provider modules, connection/migrate, DatabaseService, migrations
   client/    SvelteKit dashboard
 packages/
-  db/                 Drizzle schema, table factory, connection factory, migrations
   shared-types/       DTOs shared between server and client
   provider-adapters/  Base + per-provider adapter classes + AdapterRegistry
 ```
@@ -103,26 +103,31 @@ packages/
 
 ## 6. Database Rules
 
-- Each database is a self-contained **dialect module** under `packages/db/src/dialects/<name>/`
-  implementing the `DialectModule` contract (table creator, `ColumnKit`, audit helper, connection,
-  migrator, drizzle-kit config). Entities create tables via `getActiveDialect().table` (prefix +
-  `DB_SCHEMA` applied) — never hand-write a bare table name. Common code (schema, connection, migrate,
-  config) MUST NOT branch on the driver inline; it resolves through `getActiveDialect()` (GUD-008/011, PAT-009).
-- Every table composes the shared **base-column sets** from `packages/db/src/schema/columns.ts`
-  (built once from the active dialect's `ColumnKit`): `baseColumns` = `id`/`createdAt` on all tables;
+- The database layer lives in **`apps/server/src/database/`** (no separate package). Each database is a
+  self-contained **provider module** under `providers/<name>/` implementing the `ProviderModule`
+  contract (table creator, `ColumnKit`, audit helper, `connect`, migrator). Entities create tables via
+  `getActiveProvider().table` (prefix + `DB_SCHEMA` applied) — never hand-write a bare table name. Common
+  code (schema, connection, migrate) MUST NOT branch on the driver inline; it resolves through
+  `getActiveProvider()` (GUD-008/011, PAT-009). Both providers are **async** (libSQL + node-postgres),
+  so one repository body runs on every database.
+- Every table composes the shared **base-column sets** from `apps/server/src/database/schema/columns.ts`
+  (built once from the active provider's `ColumnKit`): `baseColumns` = `id`/`createdAt` on all tables;
   `baseEntityColumns` adds `createdBy`/`modifiedBy`/`modifiedAt`/`isActive`/`isDeleted` on user-facing
   domain entities. Never re-declare `id`/`createdAt` by hand, and author entity columns via `columnKit.*`
-  (never raw `sqlite-core`/`pg-core` builders) so one definition serves every dialect.
+  (never raw `sqlite-core`/`pg-core` builders) so one definition serves every provider.
 - Foreign keys and indexes are declared, not implied: every FK column carries a real `FOREIGN KEY`
   plus an index. `createdBy`/`modifiedBy` reference `users.id` (`ON DELETE SET NULL`) via the
   `auditTableExtras` helper; owning `*_id` FKs cascade. Add composite indexes for hot scoped lookups.
-- All persistence goes through a repository extending the generic **`BaseRepository<TTable>`**
-  (`apps/server/src/common/db/base.repository.ts`), which centralizes soft-delete filtering,
-  `user_id` scoping (`scopedToUser`), and optional-`tx` support. Multi-write operations are wrapped
-  in `db.transaction(tx => ...)` (the Unit-of-Work convention; Drizzle has no change tracking).
-- Code must run identically on every supported dialect. Adding a database = one new `dialects/<name>/`
-  folder + one `dialectRegistry` line, with zero changes to existing schema/repositories. Avoid driver-
-  specific SQL; when unavoidable, branch on `getActiveDialect()`/`isPostgres()` and cover both in tests.
+- The Drizzle client is owned by **`DatabaseService`** (`apps/server/src/database/database.service.ts`) —
+  the "DbContext equivalent": it opens the provider connection on `OnModuleInit` and closes it on
+  `OnModuleDestroy`, exposing a typed `db` getter. All persistence goes through a repository extending the
+  generic **`BaseRepository<TTable>`** (`apps/server/src/common/db/base.repository.ts`), which injects
+  `DatabaseService`, reads `db` lazily, and centralizes soft-delete filtering, `user_id` scoping
+  (`scopedToUser`), and optional-`tx` support. Multi-write operations are wrapped in
+  `db.transaction(tx => ...)` (the Unit-of-Work convention; Drizzle has no change tracking).
+- Code must run identically on every supported provider. Adding a database = one new `providers/<name>/`
+  folder + one `providerRegistry` line, with zero changes to existing schema/repositories. Avoid driver-
+  specific SQL; when unavoidable, branch on `getActiveProvider()`/`isPostgres()` and cover both in tests.
   NOTE: Drizzle supports PostgreSQL, MySQL/MariaDB, and SQLite — NOT SQL Server.
 - Schema changes require a Drizzle migration. Never edit a committed migration; add a new one.
 

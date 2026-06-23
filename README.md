@@ -4,7 +4,10 @@ A self-hosted, free-first, multi-user LLM routing gateway: an **OpenAI-compatibl
 that aggregates many providers' free tiers and routes each request through a configurable,
 metric-driven fallback chain — exhausting free capacity before touching paid models.
 
-> Status: in active development (Phase 0 — scaffolding). See [plan](./plan/) for the roadmap.
+> Status: complete — management API, OpenAI-compatible gateway, metric-driven routing engine, usage
+> analytics, the SvelteKit dashboard, admin governance (first-user-admin, registration control, user
+> management, typed settings), docs, and the Docker image are all implemented and tested (Phases 0–10).
+> See [plan](./plan/) for the roadmap.
 
 ## Tech stack
 
@@ -15,7 +18,7 @@ metric-driven fallback chain — exhausting free capacity before touching paid m
 
 ## Prerequisites
 
-- **Node.js 22 LTS** (see [`.nvmrc`](./.nvmrc) — run `nvm use`). Native modules (`better-sqlite3`) ship prebuilds for LTS lines.
+- **Node.js 22 LTS** (see [`.nvmrc`](./.nvmrc) — run `nvm use`). Native modules (`@libsql/client`) ship prebuilds for LTS lines.
 - **pnpm 9** (`corepack enable`).
 - **Docker** (optional, for the container quick start).
 
@@ -29,7 +32,7 @@ docker compose up --build     # gateway on http://localhost:5001
 With PostgreSQL instead of SQLite:
 
 ```bash
-# set DB_DRIVER=postgres and DB_URL in .env, then:
+# set DB_PROVIDER=postgres and DB_URL in .env, then:
 docker compose --profile postgres up --build
 ```
 
@@ -73,16 +76,22 @@ required ones are `ENCRYPTION_KEY`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`.
 
 ```
 apps/
-  server/   NestJS API (management /api/v1 + gateway /v1)
+  server/   NestJS API (management /api/v1 + gateway /v1); Drizzle DB layer in src/database/
   client/   SvelteKit SPA dashboard
 packages/
-  db/                 Drizzle schema, table factory, connection factory, migrations
   shared-types/       DTOs shared between server and client
   provider-adapters/  Base + per-provider adapter classes + registry
-docker/     Dockerfile
+docker/     Dockerfile + container commands
 docs/       Documentation
 ```
 
 ## Documentation
 
-See [`docs/`](./docs/README.md) for configuration, architecture, and contributor guides.
+See [`docs/`](./docs/README.md):
+
+- [Configuration](./docs/configuration.md) — every environment variable and database setup.
+- [Architecture](./docs/architecture.md) — modules, routing engine, provider adapters.
+- [Routing strategies](./docs/routing-strategies.md) — Manual sub-modes + Balanced/Smart/Fastest/Free-First.
+- [Security model](./docs/security.md) — encryption, hashed tokens, two guards, per-user isolation.
+- [API reference](./docs/api-reference.md) — `/api/v1` (management) and `/v1` (OpenAI-compatible) with examples.
+- [Adding a provider adapter](./docs/adding-a-provider.md) — contributor guide.

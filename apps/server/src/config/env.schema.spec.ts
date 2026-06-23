@@ -49,9 +49,9 @@ describe('validateEnv', () => {
     expect(env.PORT).toBe(8080);
   });
 
-  it('rejects an unsupported DB_DRIVER but accepts a supported one', () => {
-    expect(() => validateEnv({ ...validBase, DB_DRIVER: 'mysql' })).toThrow();
-    expect(validateEnv({ ...validBase, DB_DRIVER: 'postgres' }).DB_DRIVER).toBe('postgres');
+  it('rejects an unsupported DB_PROVIDER but accepts a supported one', () => {
+    expect(() => validateEnv({ ...validBase, DB_PROVIDER: 'mysql' })).toThrow();
+    expect(validateEnv({ ...validBase, DB_PROVIDER: 'postgres' }).DB_PROVIDER).toBe('postgres');
   });
 
   it('leaves optional DB_* vars undefined so @gateway/db owns their defaults', () => {

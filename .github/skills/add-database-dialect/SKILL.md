@@ -1,16 +1,16 @@
 ---
 name: add-database-dialect
-description: 'Add a NEW pluggable relational database dialect to the Free LLM Gateway @gateway/db package (any database with a Drizzle ORM core). USE WHEN: adding MySQL or MariaDB (mysql-core) support; adding SingleStore (singlestore-core) or another Drizzle-supported engine; creating a new src/dialects/<name>/ folder; implementing the DialectModule contract for a new driver; registering a dialect in dialectRegistry; wiring a new DB_DRIVER value end-to-end. Keywords: add database, new dialect, pluggable database, DialectModule, ColumnKit, dialectRegistry, SupportedDialect, getActiveDialect, mysql, mariadb, mysql-core, singlestore, drizzle core, new DB driver, createDrizzle, runMigrator, dialects folder, DB_DRIVER, drizzle.config branch, cross-driver. NOTE: there is no SQL Server / MSSQL core in Drizzle, so SQL Server cannot be added this way.'
+description: 'Add a NEW pluggable relational database provider to the Free LLM Gateway database layer (apps/server/src/database, any database with a Drizzle ORM core). USE WHEN: adding MySQL or MariaDB (mysql-core) support; adding SingleStore (singlestore-core) or another Drizzle-supported engine; creating a new providers/<name>/ folder; implementing the ProviderModule contract for a new driver; registering a provider in providerRegistry; wiring a new DB_PROVIDER value end-to-end. Keywords: add database, new provider, pluggable database, ProviderModule, ColumnKit, providerRegistry, SupportedProvider, getActiveProvider, DatabaseService, connect, DbConnection, mysql, mariadb, mysql-core, singlestore, drizzle core, new DB driver, runMigrator, providers folder, DB_PROVIDER, drizzle.config branch, cross-driver. NOTE: there is no SQL Server / MSSQL core in Drizzle, so SQL Server cannot be added this way.'
 ---
 
-# Add a New Database Dialect (`@gateway/db`)
+# Add a New Database Provider (`apps/server/src/database`)
 
-Load this skill to add a brand-new relational database to the gateway's **pluggable dialect layer**.
-Each database is one self-contained folder under `packages/db/src/dialects/<name>/` implementing the
-`DialectModule` contract (PAT-009). Adding one is **a new folder + one registry line + one config
+Load this skill to add a brand-new relational database to the gateway's **pluggable provider layer**.
+Each database is one self-contained folder under `apps/server/src/database/providers/<name>/` implementing
+the `ProviderModule` contract (PAT-009). Adding one is **a new folder + one registry line + one config
 branch**, with zero changes to existing schema files or repositories (Open/Closed — GUD-008/GUD-011).
 
-> For routine schema/entity/migration work (not a new dialect) use the **database-changes** skill
+> For routine schema/entity/migration work (not a new provider) use the **database-changes** skill
 > instead. Always obey `AGENTS.md` §6 and the `plan-consistency` instruction.
 
 ## Reality check FIRST (do this before anything else)
@@ -28,45 +28,50 @@ If either is missing, stop — it is not pluggable via this pattern.
 
 ## The contract you must satisfy
 
-`packages/db/src/dialects/dialect.contract.ts` defines the canonical surface every dialect implements:
+`apps/server/src/database/providers/provider.contract.ts` defines the canonical surface every provider implements:
 
 ```ts
-export interface DialectModule {
-  readonly id: SupportedDialect;                 // your new dialect literal
+export interface ProviderModule {
+  readonly id: SupportedProvider;                // your new provider literal
   readonly table: TableCreator;                  // prefix-applying table creator (canonical type)
   readonly columnKit: ColumnKit;                 // pk/createdAt/timestamp/boolean/integer/text
   readonly index: IndexFn;                        // table-level index builder
   auditExtras(tableName, audit, usersId): AuditExtras; // createdBy/modifiedBy FK + indexes
-  createDrizzle(schema: Schema): Db;             // build the Drizzle client (schema passed IN)
+  connect(schema: Schema): DbConnection;         // open { db, disconnect } (schema passed IN)
   runMigrator(migrationsFolder?: string): Promise<void>;
 }
 ```
 
 **Canonical typing rule:** `ColumnKit`, `TableCreator`, `IndexFn`, and `AuditExtras` are typed against
-the **SQLite** builders (the reference dialect). Your new dialect returns its REAL `<engine>-core`
-builders **cast** to those types (`... as unknown as ColumnKit`). The runtime objects are genuine
-builders (so `drizzle-kit` emits correct DDL); the cast only aligns the compile-time surface so the
-single `schema/` authored against the kit type-checks. Inferred row types match across dialects
+the **SQLite** builders (the reference provider, async via libSQL). Your new provider returns its REAL
+`<engine>-core` builders **cast** to those types (`... as unknown as ColumnKit`). The runtime objects
+are genuine builders (so `drizzle-kit` emits correct DDL); the cast only aligns the compile-time surface
+so the single `schema/` authored against the kit type-checks. Inferred row types match across providers
 (Date / boolean / number / string), so repositories stay type-safe. Mirror exactly what
-`packages/db/src/dialects/postgres/` does.
+`apps/server/src/database/providers/postgres/` does.
 
-**Import-cycle rule:** a dialect folder MUST NOT import the `schema/` barrel. `createDrizzle(schema)`
+**Async + DbConnection rule:** all providers are async (libSQL, node-postgres, mysql2 are all
+awaitable), so one repository body runs everywhere. `connect(schema)` returns a `DbConnection`
+(`{ db, disconnect }`) — the `disconnect` closure closes the underlying driver handle so
+`DatabaseService.onModuleDestroy` can shut down cleanly.
+
+**Import-cycle rule:** a provider folder MUST NOT import the `schema/` barrel. `connect(schema)`
 takes the schema as a parameter (the common `connection.ts` passes it in).
 
 ## Procedure (worked example: MySQL / MariaDB)
 
 Replace `mysql` / `mysql2` / `mysql-core` with your engine's equivalents throughout. Mirror the
-existing `dialects/sqlite/` (reference, fully typed) and `dialects/postgres/` (cast pattern) folders.
+existing `providers/sqlite/` (reference, fully typed) and `providers/postgres/` (cast pattern) folders.
 
 ### 1. Install the driver
 
-Add the Node driver to `packages/db/package.json` dependencies (Drizzle core ships with `drizzle-orm`):
+Add the Node driver to `apps/server/package.json` dependencies (Drizzle core ships with `drizzle-orm`):
 ```jsonc
 "dependencies": { "mysql2": "^3.11.0" }            // + "@types/*" if the driver needs them
 ```
 Run `pnpm install`. Pin a Node version that has prebuilt binaries if the driver is native.
 
-### 2. Create the dialect folder `packages/db/src/dialects/mysql/`
+### 2. Create the provider folder `apps/server/src/database/providers/mysql/`
 
 Create these files (all relative imports need explicit `.js` extensions — strict NodeNext):
 
@@ -79,7 +84,7 @@ export const resolveMysqlUrl = (): string => dbUrl() ?? '';
 **`table.ts`** — prefix-applying creator, cast to the canonical `TableCreator`:
 ```ts
 import { mysqlTableCreator } from 'drizzle-orm/mysql-core';
-import type { TableCreator } from '../dialect.contract.js';
+import type { TableCreator } from '../provider.contract.js';
 import { tablePrefix } from '../../common/env.js';
 
 export const mysqlTable = mysqlTableCreator((name) => `${tablePrefix()}${name}`) as unknown as TableCreator;
@@ -88,7 +93,7 @@ export const mysqlTable = mysqlTableCreator((name) => `${tablePrefix()}${name}`)
 **`column-kit.ts`** — semantic primitives over `mysql-core`, cast to the canonical `ColumnKit`:
 ```ts
 import { boolean, int, text, timestamp } from 'drizzle-orm/mysql-core';
-import type { ColumnKit } from '../dialect.contract.js';
+import type { ColumnKit } from '../provider.contract.js';
 
 /** Real mysql-core builders cast to the canonical (SQLite-typed) ColumnKit. See postgres for WHY. */
 export const mysqlColumnKit = {
@@ -103,7 +108,7 @@ export const mysqlColumnKit = {
 ```
 
 **`audit.ts`** — FK + index helper; params/return use the canonical shapes, columns cast to the
-engine column type (mirror `dialects/postgres/audit.ts`):
+engine column type (mirror `providers/postgres/audit.ts`):
 ```ts
 import { foreignKey, index, type AnyMySqlColumn } from 'drizzle-orm/mysql-core';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
@@ -130,12 +135,14 @@ export function mysqlAuditTableExtras(
 ```ts
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
-import type { Db, Schema } from '../../types.js';
+import type { Db, DbConnection, Schema } from '../../types.js';
 import { resolveMysqlUrl } from './paths.js';
 
-export const createMysqlDrizzle = (schema: Schema): Db => {
+export const connectMysql = (schema: Schema): DbConnection => {
   const pool = mysql.createPool(resolveMysqlUrl());
-  return drizzle(pool, { schema, mode: 'default' }); // mysql2 requires a `mode`
+  // Cast to the canonical libSQL-typed `Db`: mysql2 shares the async query-builder surface (PAT-009).
+  const db = drizzle(pool, { schema, mode: 'default' }) as unknown as Db; // mysql2 requires a `mode`
+  return { db, disconnect: async () => { await pool.end(); } };
 };
 ```
 
@@ -148,7 +155,7 @@ import mysql from 'mysql2/promise';
 import { resolveMysqlUrl } from './paths.js';
 
 const defaultMigrationsFolder = (): string =>
-  fileURLToPath(new URL('../../../migrations/mysql', import.meta.url));
+  fileURLToPath(new URL('../../migrations/mysql', import.meta.url));
 
 export const runMysqlMigrator = async (migrationsFolder?: string): Promise<void> => {
   const pool = mysql.createPool(resolveMysqlUrl());
@@ -165,80 +172,79 @@ export const runMysqlMigrator = async (migrationsFolder?: string): Promise<void>
 **`index.ts`** — assemble the module (cast `index` like postgres does):
 ```ts
 import { index as mysqlIndex } from 'drizzle-orm/mysql-core';
-import type { DialectModule, IndexFn } from '../dialect.contract.js';
+import type { ProviderModule, IndexFn } from '../provider.contract.js';
 import { mysqlTable } from './table.js';
 import { mysqlColumnKit } from './column-kit.js';
 import { mysqlAuditTableExtras } from './audit.js';
-import { createMysqlDrizzle } from './connection.js';
+import { connectMysql } from './connection.js';
 import { runMysqlMigrator } from './migrate.js';
 
-export const mysqlDialect: DialectModule = {
+export const mysqlProvider: ProviderModule = {
   id: 'mysql',
   table: mysqlTable,
   columnKit: mysqlColumnKit,
   index: mysqlIndex as unknown as IndexFn,
   auditExtras: mysqlAuditTableExtras,
-  createDrizzle: createMysqlDrizzle,
+  connect: connectMysql,
   runMigrator: runMysqlMigrator,
 };
 ```
 
-### 3. Extend the `Db` union — `packages/db/src/types.ts`
+### 3. No `Db` type change — the canonical single type stays
 
-`createDrizzle` returns `Db`, so the union must include the new driver's database type:
-```ts
-import type { MySql2Database } from 'drizzle-orm/mysql2';
-export type Db = NodePgDatabase<Schema> | BetterSQLite3Database<Schema> | MySql2Database<Schema>;
-```
+`Db = LibSQLDatabase<Schema>` is the **single canonical** async client type (libSQL is the reference).
+Your `connect()` builds the real `<engine>` Drizzle client and casts it to `Db` at the boundary
+(`... as unknown as Db`, shown in `connection.ts` above) — exactly like postgres. There is no union to
+widen, so `types.ts` is untouched.
 
 ### 4. Widen the union + register (one line each) — the Open/Closed guard
 
-`packages/db/src/dialects/dialect.contract.ts`:
+`apps/server/src/database/providers/provider.contract.ts`:
 ```ts
-export type SupportedDialect = 'sqlite' | 'postgres' | 'mysql';
+export type SupportedProvider = 'sqlite' | 'postgres' | 'mysql';
 ```
-`packages/db/src/dialects/registry.ts`:
+`apps/server/src/database/providers/registry.ts`:
 ```ts
-import { mysqlDialect } from './mysql/index.js';
-export const dialectRegistry = {
-  sqlite: sqliteDialect,
-  postgres: postgresDialect,
-  mysql: mysqlDialect,
-} satisfies Record<SupportedDialect, DialectModule>;
+import { mysqlProvider } from './mysql/index.js';
+export const providerRegistry = {
+  sqlite: sqliteProvider,
+  postgres: postgresProvider,
+  mysql: mysqlProvider,
+} satisfies Record<SupportedProvider, ProviderModule>;
 ```
-The `satisfies Record<SupportedDialect, DialectModule>` makes a missing module a **compile error** —
+The `satisfies Record<SupportedProvider, ProviderModule>` makes a missing module a **compile error** —
 that error is the guard. NO other existing file changes.
 
-### 5. drizzle-kit config branch — `packages/db/drizzle.config.ts`
+### 5. drizzle-kit config branch — `apps/server/drizzle.config.ts`
 
-`drizzle.config.ts` is intentionally **self-contained** (it branches on `DB_DRIVER` inline) because
-drizzle-kit's loader cannot resolve NodeNext `.js` imports through the dialect modules. Add the new
-branch for `out` + `dialect`:
+`drizzle.config.ts` is intentionally **self-contained** (it branches on `DB_PROVIDER` inline) because
+drizzle-kit's loader cannot resolve NodeNext `.js` imports through the provider modules. Add the new
+branch for `out` + `dialect` (drizzle-kit's own `dialect` config key):
 ```ts
-const driver = process.env.DB_DRIVER ?? 'sqlite';
-const out = driver === 'postgres' ? './migrations/postgres'
-          : driver === 'mysql' ? './migrations/mysql'
-          : './migrations/sqlite';
-const dialect = driver === 'postgres' ? 'postgresql' : driver === 'mysql' ? 'mysql' : 'sqlite';
+const provider = process.env.DB_PROVIDER ?? 'sqlite';
+const out = provider === 'postgres' ? './src/database/migrations/postgres'
+          : provider === 'mysql' ? './src/database/migrations/mysql'
+          : './src/database/migrations/sqlite';
+const dialect = provider === 'postgres' ? 'postgresql' : provider === 'mysql' ? 'mysql' : 'sqlite';
 ```
-Keep the `out` value in sync with the dialect's `migrate.ts` `defaultMigrationsFolder()`.
+Keep the `out` value in sync with the provider's `migrate.ts` `defaultMigrationsFolder()`.
 
 ### 6. Migrations folder
 
-Create `packages/db/migrations/mysql/` (commit a `.gitkeep` if empty).
+Create `apps/server/src/database/migrations/mysql/` (commit a `.gitkeep` if empty).
 
 ### 7. Env wiring (server)
 
-- `apps/server/src/config/env.schema.ts`: add the value to the `DB_DRIVER` enum
+- `apps/server/src/config/env.schema.ts`: add the value to the `DB_PROVIDER` enum
   (`z.enum(['postgres', 'sqlite', 'mysql'])`).
-- `.env.example`: document the new `DB_DRIVER` value + the `DB_URL` format for the engine.
+- `.env.example`: document the new `DB_PROVIDER` value + the `DB_URL` format for the engine.
 
 ## Tests (same change)
 
 Add/extend specs (Vitest), mirroring the existing dialect specs:
-- `dialects/registry.spec.ts` — the registry has the new entry; `resolveDialect()` returns it for
-  `DB_DRIVER=mysql`; `getActiveDialect().id` matches.
-- `dialects/mysql/table.spec.ts` — `DB_TABLE_PREFIX` is applied.
+- `providers/registry.spec.ts` — the registry has the new entry; `resolveProvider()` returns it for
+  `DB_PROVIDER=mysql`; `getActiveProvider().id` matches.
+- `providers/mysql/table.spec.ts` — `DB_TABLE_PREFIX` is applied.
 - Cross-driver persistence (round-trip + audit FK/index). If the engine needs a running server
   (MySQL/Postgres do), either keep it **compile/typecheck-only** for now (like Postgres) or add a
   CI service container. State which in the task notes.
@@ -246,23 +252,22 @@ Add/extend specs (Vitest), mirroring the existing dialect specs:
 ## Gate
 
 ```bash
-pnpm --filter @gateway/db test && pnpm --filter @gateway/db typecheck && pnpm --filter @gateway/db lint
-DB_DRIVER=mysql pnpm --filter @gateway/db db:generate   # emits engine DDL (manual; db:generate runs under tsx)
-pnpm --filter server test                                # createDb() still works
+pnpm --filter server test && pnpm --filter server typecheck && pnpm --filter server lint
+DB_PROVIDER=mysql pnpm --filter server db:generate   # emits engine DDL (manual; db:generate runs under tsx)
 ```
 
-## Plan / docs sync (required — plan-consistency "Database dialect" row)
+## Plan / docs sync (required — plan-consistency "Database provider" row)
 
-Update in ONE pass: `CON-001`, `DEP-003`, the `DB_DRIVER` enum (TASK-003), `GUD-008`/`GUD-011`,
+Update in ONE pass: `CON-001`, `DEP-003`, the `DB_PROVIDER` enum (TASK-003), `GUD-008`/`GUD-011`,
 `PAT-006`/`PAT-009`, `FILE-002` in `plan/feature-free-llm-gateway-1.md`; the phase-0.5 guide; and add
 a `TASK-0XX` row (appended, never renumbered) marked complete with the date.
 
 ## Done checklist
 
-- [ ] Driver installed; `Db` union extended in `types.ts`.
-- [ ] `dialects/<name>/` folder implements the full `DialectModule` (table, column-kit, audit, index, connection, migrate, index.ts).
-- [ ] Real `<engine>-core` builders cast to canonical types; dialect folder does NOT import `schema/`.
-- [ ] `SupportedDialect` widened + `dialectRegistry` line added (`satisfies` compiles).
-- [ ] `drizzle.config.ts` branch + `migrations/<name>/` folder + `DB_DRIVER` enum + `.env.example`.
-- [ ] Tests added; gate green; `DB_DRIVER=<name> db:generate` emits DDL.
+- [ ] Driver installed; `connect()` casts the client to the canonical `Db` (no union to widen).
+- [ ] `providers/<name>/` folder implements the full `ProviderModule` (table, column-kit, audit, index, connection, migrate, index.ts).
+- [ ] Real `<engine>-core` builders cast to canonical types; provider folder does NOT import `schema/`.
+- [ ] `SupportedProvider` widened + `providerRegistry` line added (`satisfies` compiles).
+- [ ] `drizzle.config.ts` branch + `migrations/<name>/` folder + `DB_PROVIDER` enum + `.env.example`.
+- [ ] Tests added; gate green; `DB_PROVIDER=<name> db:generate` emits DDL.
 - [ ] Plan/spec/guide synced (plan-consistency).

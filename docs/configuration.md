@@ -18,14 +18,20 @@ The server is configured entirely through environment variables, validated at bo
 | `PORT` | `5001` | HTTP port. |
 | `JWT_ACCESS_TTL` | `15m` | Access-token lifetime. |
 | `JWT_REFRESH_TTL` | `30d` | Refresh-token lifetime. |
-| `DB_DRIVER` | `sqlite` | `sqlite` or `postgres`. |
+| `DB_PROVIDER` | `sqlite` | `sqlite` or `postgres`. |
 | `DB_URL` | `file:./data/llm-gateway.db` | SQLite path or `postgres://` connection string. |
 | `DB_SCHEMA` | `public` | PostgreSQL schema (ignored on SQLite). |
 | `DB_TABLE_PREFIX` | _(empty)_ | Prepended to every table name (e.g. `lg_`). |
 | `MAX_FALLBACK_ATTEMPTS` | `20` | Max providers tried per request. |
 | `HEALTH_PROBE_INTERVAL_MS` | `300000` | Key health-probe interval. |
+| `REQUEST_LOG_RETENTION_DAYS` | `90` | `/v1` request logs older than this are pruned by a daily job. |
 
 ## Database
 
 The gateway runs identically on SQLite (zero-config dev) and PostgreSQL (production). Switch with
-`DB_DRIVER` + `DB_URL`. Generate and apply migrations with `pnpm db:generate` / `pnpm db:migrate`.
+`DB_PROVIDER` + `DB_URL`. Generate and apply migrations with `pnpm db:generate` / `pnpm db:migrate`.
+
+On PostgreSQL, `DB_SCHEMA` is honored at runtime and during migration (every pooled connection pins
+its `search_path`, and the migrator creates the schema first). `DB_TABLE_PREFIX` is baked into the
+**generated migration SQL**, so set it before running `pnpm db:generate` and keep it stable for a
+deployment — changing the prefix means regenerating migrations.

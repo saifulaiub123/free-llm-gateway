@@ -4,10 +4,9 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { sql } from 'drizzle-orm';
 import request from 'supertest';
-import type { DbExecutor } from '@gateway/db';
 import { AppModule } from '../src/app.module.js';
 import { applyGlobalConfig } from '../src/app.setup.js';
-import { DB } from '../src/database/database.module.js';
+import { DatabaseService } from '../src/database/index.js';
 
 // DDL for the identity tables (mirrors migrations/sqlite/0000_*), applied to the app's :memory: db.
 const USERS_DDL = `CREATE TABLE users (
@@ -24,6 +23,12 @@ const REFRESH_DDL = `CREATE TABLE refresh_tokens (
   expires_at INTEGER NOT NULL, revoked_at INTEGER, replaced_by_token_id INTEGER,
   created_by_ip TEXT, user_agent TEXT
 )`;
+// Registration gating (TASK-073) reads the settings store on non-bootstrap registrations.
+const SETTINGS_DDL = `CREATE TABLE settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  scope TEXT NOT NULL, user_id INTEGER, key TEXT NOT NULL, value TEXT NOT NULL
+)`;
 
 /** Boots the full app with production global config and creates the identity tables on its db. */
 async function bootstrapApp(): Promise<INestApplication> {
@@ -31,9 +36,10 @@ async function bootstrapApp(): Promise<INestApplication> {
   const app = moduleRef.createNestApplication();
   applyGlobalConfig(app);
   await app.init();
-  const db = app.get<DbExecutor>(DB);
-  db.run(sql.raw(USERS_DDL));
-  db.run(sql.raw(REFRESH_DDL));
+  const db = app.get(DatabaseService).db;
+  await db.run(sql.raw(USERS_DDL));
+  await db.run(sql.raw(REFRESH_DDL));
+  await db.run(sql.raw(SETTINGS_DDL));
   return app;
 }
 
@@ -84,5 +90,13 @@ describe('Auth (e2e)', () => {
     await authPost(app, 'logout', { refreshToken }).expect(200);
     // After logout the token is revoked, so refresh is rejected.
     await authPost(app, 'refresh', { refreshToken }).expect(401);
+  });
+
+  it('exposes public registration status (TASK-074)', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/auth/registration-status')
+      .expect(200);
+    // Users were registered earlier in this suite, and the flag defaults to enabled.
+    expect(response.body.data).toEqual({ registrationEnabled: true, hasUsers: true });
   });
 });

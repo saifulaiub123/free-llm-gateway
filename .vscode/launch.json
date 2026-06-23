@@ -1,0 +1,40 @@
+{
+  // Debug the NestJS server and the SvelteKit client together.
+  // Use the compound "Debug: full stack", or launch either side on its own.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // NestJS server. Runs the same @swc-node/register loader the `pnpm dev` script uses (tsx/esbuild
+      // would drop decorator metadata and break Nest DI). Breakpoints work in apps/server/src/**.
+      // NOTE: no --watch here so breakpoints stay attached; restart the session to pick up changes.
+      "type": "node",
+      "request": "launch",
+      "name": "Debug: server",
+      "cwd": "${workspaceFolder}/apps/server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--import", "@swc-node/register/esm-register"],
+      "program": "${workspaceFolder}/apps/server/src/main.ts",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      // SvelteKit client. Starts the Vite dev server (preLaunchTask) then opens a debuggable browser.
+      // Breakpoints work in apps/client/src/**. Swap "msedge" for "chrome" if you prefer Chrome.
+      "type": "msedge",
+      "request": "launch",
+      "name": "Debug: client (browser)",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/apps/client",
+      "preLaunchTask": "dev: client",
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug: full stack",
+      "configurations": ["Debug: server", "Debug: client (browser)"],
+      "stopAll": true
+    }
+  ]
+}

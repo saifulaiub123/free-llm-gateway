@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Multi-stage build for the Free LLM Gateway.
-# Builds the SvelteKit client to a static SPA and runs the NestJS server (via tsx).
+# Builds the SvelteKit client to a static SPA and runs the NestJS server (via @swc-node/register).
 
 ARG NODE_VERSION=22.15.0
 
@@ -12,8 +12,8 @@ RUN corepack enable
 WORKDIR /app
 
 # --- Dependencies: install with the workspace manifests for caching ---------
-# WHY the build toolchain: better-sqlite3 is a native module; python3/make/g++ let it compile
-# if no prebuilt binary is available for this platform.
+# WHY the build toolchain: the libSQL / pg native modules may need to compile; python3/make/g++ let
+# them build if no prebuilt binary is available for this platform.
 FROM base AS deps
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
@@ -21,7 +21,6 @@ RUN apt-get update \
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY apps/server/package.json ./apps/server/package.json
 COPY apps/client/package.json ./apps/client/package.json
-COPY packages/db/package.json ./packages/db/package.json
 COPY packages/shared-types/package.json ./packages/shared-types/package.json
 COPY packages/provider-adapters/package.json ./packages/provider-adapters/package.json
 RUN pnpm install --frozen-lockfile
@@ -37,9 +36,10 @@ ENV NODE_ENV=production
 # Absolute path to the built client SPA, served by the server in production.
 ENV CLIENT_DIST_PATH=/app/apps/client/build
 COPY --from=build /app ./
-# SQLite database persistence (used when DB_DRIVER=sqlite).
+# SQLite database persistence (used when DB_PROVIDER=sqlite).
 VOLUME ["/app/apps/server/data"]
 EXPOSE 5001
 WORKDIR /app/apps/server
-# The server runs via tsx (handles TypeScript + decorator metadata + workspace resolution).
+# The server runs via @swc-node/register (TypeScript + emitDecoratorMetadata for NestJS DI +
+# workspace resolution). tsx/esbuild is NOT used at runtime — it drops decorator metadata.
 CMD ["pnpm", "start"]

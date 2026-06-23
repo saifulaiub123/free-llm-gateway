@@ -15,8 +15,8 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:generate": "pnpm --filter @gateway/db db:generate",
-    "db:migrate": "pnpm --filter @gateway/db db:migrate"
+    "db:generate": "pnpm --filter server db:generate",
+    "db:migrate": "pnpm --filter server db:migrate"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",

@@ -4,15 +4,49 @@
  * WHY a separate file with semantic names: each theme is self-contained, so adding a new theme is
  * a copy of this token block under a new `[data-theme='...']` selector — no component changes. The
  * `:root` selector makes light the default before the theme store runs (prevents a flash).
+ *
+ * Glassmorphism design system: surfaces use semi-transparent backgrounds with backdrop-filter blur.
+ * The --theme-glass-border token keeps edges distinct without hard lines. Accent (teal) adds a
+ * modern dashboard feel alongside the primary (purple/indigo).
  */
 
 :root,
 [data-theme='light'] {
-  --theme-background: oklch(0.99 0 0);
-  --theme-surface: oklch(1 0 0);
+  /* Base */
+  --theme-background: oklch(0.97 0.005 260);
+  --theme-surface: oklch(1 0 0 / 0.6);
   --theme-foreground: oklch(0.21 0.03 257);
   --theme-muted: oklch(0.55 0.02 257);
   --theme-border: oklch(0.92 0.01 257);
+
+  /* Brand */
   --theme-primary: oklch(0.55 0.18 264);
   --theme-primary-foreground: oklch(0.99 0 0);
+
+  /* Accent (teal) — secondary brand color for highlights, badges, sparklines */
+  --theme-accent: oklch(0.6 0.15 200);
+  --theme-accent-foreground: oklch(0.99 0 0);
+
+  /* Surface depth — raised for modals/dropdowns, overlay for dialogs */
+  --theme-surface-raised: oklch(1 0 0 / 0.8);
+  --theme-surface-overlay: oklch(0 0 0 / 0.4);
+
+  /* Glass */
+  --theme-glass-border: oklch(1 0 0 / 0.3);
+
+  /* Gradient — subtle background wash */
+  --theme-gradient-from: oklch(0.97 0.008 260);
+  --theme-gradient-to: oklch(0.97 0.008 200);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.04);
+  --shadow-md: 0 4px 6px oklch(0 0 0 / 0.04), 0 1px 3px oklch(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px oklch(0 0 0 / 0.04), 0 4px 6px oklch(0 0 0 / 0.08);
+  --shadow-glass: 0 4px 20px oklch(0 0 0 / 0.06);
+
+  /* Border radius scale */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }

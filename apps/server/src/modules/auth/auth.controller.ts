@@ -1,8 +1,14 @@
-import { Body, Controller, HttpCode, HttpStatus, Ip, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Req } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { AuthService } from './auth.service.js';
-import { LoginDto, RefreshDto, RegisterDto, TokenPairDto } from './dto/auth.dto.js';
+import { AuthService, type RegistrationStatus } from './auth.service.js';
+import {
+  LoginDto,
+  RefreshDto,
+  RegisterDto,
+  RegistrationStatusDto,
+  TokenPairDto,
+} from './dto/auth.dto.js';
 import type { RequestContext, TokenPair } from './auth.types.js';
 
 /** Thin controller: validates input via DTOs and delegates entirely to {@link AuthService}. */
@@ -21,6 +27,13 @@ export class AuthController {
   @ApiCreatedResponse({ type: TokenPairDto })
   register(@Body() dto: RegisterDto, @Ip() ip: string, @Req() req: Request): Promise<TokenPair> {
     return this.auth.register(dto.email, dto.password, this.context(ip, req));
+  }
+
+  @Get('registration-status')
+  @ApiOperation({ summary: 'Whether self-registration is open and whether any user exists yet.' })
+  @ApiOkResponse({ type: RegistrationStatusDto })
+  registrationStatus(): Promise<RegistrationStatus> {
+    return this.auth.registrationStatus();
   }
 
   @Post('login')

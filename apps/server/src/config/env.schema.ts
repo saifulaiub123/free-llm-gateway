@@ -4,11 +4,11 @@ import { z } from 'zod';
  * Validates process environment at boot; the server refuses to start if required vars are missing
  * or malformed (fail-fast). Consumed by `@nestjs/config` in TASK-002.
  *
- * WHY the `DB_*` vars are optional here (no re-declared defaults): the database package
- * (`@gateway/db`) owns those defaults at the point of use — each dialect's `paths.ts` for `DB_URL`
- * and `common/env.ts` for `DB_DRIVER`/`DB_SCHEMA`/`DB_TABLE_PREFIX`. This schema validates their
- * shape only, so the default values live in exactly one place and can never drift between the
- * validated config and what `@gateway/db` reads from `process.env`.
+ * WHY the `DB_*` vars are optional here (no re-declared defaults): the database module owns those
+ * defaults at the point of use — each provider's `paths.ts` for `DB_URL` and `common/env.ts` for
+ * `DB_PROVIDER`/`DB_SCHEMA`/`DB_TABLE_PREFIX`. This schema validates their shape only, so the default
+ * values live in exactly one place and can never drift between the validated config and what the
+ * database module reads from `process.env`.
  */
 export const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(5001),
@@ -24,14 +24,17 @@ export const envSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
 
-  // DB_* defaults are owned by @gateway/db (see WHY above); validate shape only.
-  DB_DRIVER: z.enum(['postgres', 'sqlite']).optional(),
+  // DB_* defaults are owned by the database module (see WHY above); validate shape only.
+  DB_PROVIDER: z.enum(['postgres', 'sqlite']).optional(),
   DB_URL: z.string().min(1).optional(),
   DB_SCHEMA: z.string().min(1).optional(),
   DB_TABLE_PREFIX: z.string().optional(),
 
   MAX_FALLBACK_ATTEMPTS: z.coerce.number().int().positive().default(20),
   HEALTH_PROBE_INTERVAL_MS: z.coerce.number().int().positive().default(300_000),
+
+  // Per-request /v1 logs older than this are pruned by a scheduled retention job (TASK-056).
+  REQUEST_LOG_RETENTION_DAYS: z.coerce.number().int().positive().default(90),
 });
 
 /** Fully-validated, typed environment configuration. */

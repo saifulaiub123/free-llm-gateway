@@ -1,0 +1,132 @@
+import { browser } from '$app/environment';
+import { API_BASE } from '../config';
+import type { Principal, TokenPair } from '../api/types';
+
+const ACCESS_KEY = 'flg.accessToken';
+const REFRESH_KEY = 'flg.refreshToken';
+
+/** Decodes the `sub`/`role` claims from a JWT without verifying it (verification is the server's job). */
+function decodePrincipal(accessToken: string): Principal | null {
+  try {
+    const payload = accessToken.split('.')[1];
+    if (!payload) return null;
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const claims = JSON.parse(json) as { sub?: number; role?: string };
+    if (typeof claims.sub !== 'number') return null;
+    return { id: claims.sub, role: claims.role ?? 'user' };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reactive auth state (Svelte 5 runes).
+ *
+ * WHY a runes class holding the token pair + decoded principal: it is the single source of truth the
+ * `apiFetch` wrapper and the route guards read. Tokens persist to `localStorage` so a page reload in
+ * this SPA keeps the session. Login/refresh use raw `fetch` (not `apiFetch`) to avoid an import cycle
+ * and so a failed refresh never recurses through the 401-retry path.
+ */
+class AuthStore {
+  accessToken = $state<string | null>(null);
+  refreshToken = $state<string | null>(null);
+  user = $state<Principal | null>(null);
+
+  /** True once a valid access token (and decoded principal) is present. */
+  get isAuthenticated(): boolean {
+    return this.user !== null;
+  }
+
+  /** Restores any persisted session from `localStorage` (call once on app start). */
+  init(): void {
+    if (!browser) return;
+    const access = localStorage.getItem(ACCESS_KEY);
+    const refresh = localStorage.getItem(REFRESH_KEY);
+    if (access && refresh) {
+      this.apply({ accessToken: access, refreshToken: refresh });
+    }
+  }
+
+  /** Authenticates with email + password, persisting the returned token pair. */
+  async login(email: string, password: string): Promise<void> {
+    await this.exchange('/auth/login', { email, password });
+  }
+
+  /** Registers a new account, persisting the returned token pair. */
+  async register(email: string, password: string): Promise<void> {
+    await this.exchange('/auth/register', { email, password });
+  }
+
+  /** Revokes the refresh token server-side (best-effort) and clears local state. */
+  async logout(): Promise<void> {
+    const refreshToken = this.refreshToken;
+    this.clear();
+    if (refreshToken) {
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => undefined);
+    }
+  }
+
+  /** Attempts a single token refresh; returns whether a new access token was obtained. */
+  async tryRefresh(): Promise<boolean> {
+    if (!this.refreshToken) return false;
+    try {
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ refreshToken: this.refreshToken }),
+      });
+      if (!response.ok) {
+        this.clear();
+        return false;
+      }
+      const body = (await response.json()) as { data: TokenPair };
+      this.apply(body.data);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** POSTs credentials to an auth endpoint and applies the resulting token pair. */
+  private async exchange(path: string, payload: Record<string, string>): Promise<void> {
+    const response = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      const { parseErrorMessage, ApiError } = await import('../api/error');
+      throw new ApiError(response.status, parseErrorMessage(text));
+    }
+    this.apply((JSON.parse(text) as { data: TokenPair }).data);
+  }
+
+  /** Stores a new token pair, decodes the principal, and persists both tokens. */
+  private apply(tokens: TokenPair): void {
+    this.accessToken = tokens.accessToken;
+    this.refreshToken = tokens.refreshToken;
+    this.user = decodePrincipal(tokens.accessToken);
+    if (browser) {
+      localStorage.setItem(ACCESS_KEY, tokens.accessToken);
+      localStorage.setItem(REFRESH_KEY, tokens.refreshToken);
+    }
+  }
+
+  /** Clears in-memory + persisted session state. */
+  private clear(): void {
+    this.accessToken = null;
+    this.refreshToken = null;
+    this.user = null;
+    if (browser) {
+      localStorage.removeItem(ACCESS_KEY);
+      localStorage.removeItem(REFRESH_KEY);
+    }
+  }
+}
+
+export const authStore = new AuthStore();
