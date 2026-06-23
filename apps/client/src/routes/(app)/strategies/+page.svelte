@@ -24,29 +24,48 @@
   const load = (): Promise<[StrategyView[], Provider[]]> =>
     Promise.all([strategiesApi.list(), providersApi.list()]);
 
-  // 🔁 Per-strategy model cache (Map<strategyId, ModelView[]>)
+  // 🔁 Script-level tracking of Async data so $effect can react to it
+  let allStrategies = $state<StrategyView[]>([]);
+  let allProviders = $state<Provider[]>([]);
+
+  // 🔁 Per-strategy model cache — loaded via $effect, not from template
   let modelCache = $state<Map<number, ModelView[]>>(new Map());
-  let cacheLoading = $state(false);
+  let selectedModels = $state<ModelView[]>([]);
+  let modelsLoading = $state(false);
 
-  /** Fetch enabled models for a strategy, using cache if available. */
-  async function loadModelsForStrategy(strategyId: number): Promise<ModelView[]> {
-    const cached = modelCache.get(strategyId);
-    if (cached) return cached;
+  // When the selected strategy changes, load models from cache or API.
+  // WHY $effect instead of {#await}: Svelte 5 forbids mutating $state inside
+  // template expressions (state_unsafe_mutation).
+  $effect(() => {
+    const id = selectedId;
+    const strategies = allStrategies;
+    if (!strategies.length || id === null) return;
 
-    cacheLoading = true;
-    try {
-      const page = await modelsApi.query({
-        filter: { enabled: true },
-        per_page: 200,
-      });
-      const models = page.items;
-      // Update cache immutably
-      modelCache = new Map(modelCache).set(strategyId, models);
-      return models;
-    } finally {
-      cacheLoading = false;
+    // Resolve strategy to verify it exists
+    const strategy = resolveSelected(strategies);
+    if (!strategy) return;
+
+    const cached = modelCache.get(id);
+    if (cached) {
+      selectedModels = cached;
+      return;
     }
-  }
+
+    // Defer the async load so state mutations don't run during effect evaluation
+    queueMicrotask(async () => {
+      modelsLoading = true;
+      try {
+        const page = await modelsApi.query({
+          filter: { enabled: true },
+          per_page: 200,
+        });
+        modelCache = new Map(modelCache).set(id, page.items);
+        selectedModels = page.items;
+      } finally {
+        modelsLoading = false;
+      }
+    });
+  });
 
   function resolveSelected(strategies: StrategyView[]): StrategyView | undefined {
     return (
@@ -109,7 +128,17 @@
 <PageHeader title="Routing strategies" description="Pick how the gateway orders fallback candidates. The default strategy is used when a request sends no override header." />
 
 <Async {load}>
-  {#snippet children([strategies, providers], reload)}
+  {#snippet children(data, reload)}
+    {@const strategies = data[0] as StrategyView[]}
+    {@const providers = data[1] as Provider[]}
+    <!-- Sync script-level state so $effect can react to strategy changes -->
+    {#if allStrategies !== strategies}
+      {(() => {
+        allStrategies = strategies;
+        allProviders = providers;
+        return '';
+      })()}
+    {/if}
     {@const selected = resolveSelected(strategies)}
     <div class="flex gap-6">
       <!-- Left sidebar: ultra-compact strategy list -->
@@ -191,14 +220,12 @@
               {/if}
             </div>
             {#key selected.id}
-              {#if cacheLoading}
+              {#if modelsLoading}
                 <div class="flex h-40 items-center justify-center text-sm text-muted">
                   Loading models…
                 </div>
               {:else}
-                {#await loadModelsForStrategy(selected.id) then models}
-                  <StrategyConfigPanel strategy={selected} {models} {providers} onsaved={reload} />
-                {/await}
+                <StrategyConfigPanel strategy={selected} models={selectedModels} {providers} onsaved={reload} />
               {/if}
             {/key}
           </Card>
