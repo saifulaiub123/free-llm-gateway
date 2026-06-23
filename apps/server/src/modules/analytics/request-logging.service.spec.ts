@@ -7,6 +7,7 @@ function candidate(modelId: number, providerKey: string, costPer1m: number): Rou
   return {
     userModelId: modelId,
     modelId,
+    upstreamModelId: `model-${modelId}`,
     providerKey,
     keyId: modelId,
     isFree: costPer1m === 0,

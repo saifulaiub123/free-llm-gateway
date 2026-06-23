@@ -70,6 +70,7 @@ export class CandidateLoader {
       candidates.push({
         userModelId: row.id,
         modelId: model.id,
+        upstreamModelId: model.modelId,
         providerKey: providerKeyById.get(model.providerId) ?? 'unknown',
         keyId: keyId ?? 0,
         isFree: model.isFree,

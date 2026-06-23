@@ -81,7 +81,7 @@ export class FallbackExecutor {
       attempts += 1;
       try {
         const response = await adapter.chatCompletion(
-          request,
+          { ...request, model: candidate.upstreamModelId },
           this.encryption.decrypt(key.encryptedKey),
         );
         this.rateLimit.recordUsage(
@@ -144,7 +144,7 @@ export class FallbackExecutor {
       const startedAt = Date.now();
       attempts += 1;
       const iterator = adapter
-        .streamChatCompletion(request, this.encryption.decrypt(key.encryptedKey))
+        .streamChatCompletion({ ...request, model: candidate.upstreamModelId }, this.encryption.decrypt(key.encryptedKey))
         [Symbol.asyncIterator]();
       try {
         const first = await iterator.next(); // forces the upstream connection / first error

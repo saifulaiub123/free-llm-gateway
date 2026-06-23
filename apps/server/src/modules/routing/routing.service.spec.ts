@@ -10,6 +10,7 @@ function candidate(userModelId: number, overrides: Partial<RoutingCandidate> = {
   return {
     userModelId,
     modelId: userModelId,
+    upstreamModelId: `model-${userModelId}`,
     providerKey: 'groq',
     keyId: 1,
     isFree: true,

@@ -15,6 +15,7 @@ function candidate(modelId: number, keyId: number, providerKey: string): Routing
   return {
     userModelId: modelId,
     modelId,
+    upstreamModelId: `model-${modelId}`,
     providerKey,
     keyId,
     isFree: true,

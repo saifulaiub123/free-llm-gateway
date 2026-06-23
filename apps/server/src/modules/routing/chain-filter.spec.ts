@@ -7,6 +7,7 @@ function makeCandidate(overrides: Partial<RoutingCandidate> = {}): RoutingCandid
   return {
     userModelId: 1,
     modelId: 1,
+    upstreamModelId: 'model-1',
     providerKey: 'groq',
     keyId: 1,
     isFree: true,

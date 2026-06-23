@@ -14,6 +14,8 @@ export type ManualMode = 'fixed' | 'stability' | 'rate_limit' | 'latency' | 'cos
 export interface RoutingCandidate {
   userModelId: number;
   modelId: number;
+  /** Upstream-facing model name (e.g. "gemini-2.0-flash"), used to override `model: "auto"` before the adapter call. */
+  upstreamModelId: string;
   providerKey: string;
   keyId: number;
   isFree: boolean;
