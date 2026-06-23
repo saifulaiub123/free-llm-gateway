@@ -33,11 +33,11 @@
     {required}
     {autocomplete}
     bind:value
-    class="w-full rounded border bg-background px-3 py-2 text-sm outline-none transition focus:border-primary {error
-      ? 'border-red-500'
+    class="w-full rounded-lg border bg-surface px-3 py-2 text-sm font-sans outline-none transition-all duration-150 placeholder:text-muted/60 focus:border-primary focus:shadow-[0_0_0_3px] focus:shadow-primary/20 {error
+      ? 'border-red-500 focus:shadow-red-500/20'
       : 'border-border'}"
   />
   {#if error}
-    <p class="text-xs text-red-500">{error}</p>
+    <p class="mt-0.5 text-xs text-red-500">{error}</p>
   {/if}
 </div>

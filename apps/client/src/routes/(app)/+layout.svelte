@@ -1,11 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
   import { authStore } from '$lib/stores/auth.svelte';
-  import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+  import Sidebar from '$lib/components/Sidebar.svelte';
+  import MobileNav from '$lib/components/MobileNav.svelte';
+  import UserMenu from '$lib/components/UserMenu.svelte';
+  import Logo from '$lib/components/ui/Logo.svelte';
 
   let { children } = $props();
+
+  let sidebarMobileOpen = $state(false);
 
   // SPA auth guard: there is no hooks.server.ts, so unauthenticated users are redirected here.
   onMount(() => {
@@ -14,81 +18,70 @@
     }
   });
 
-  const links = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/keys', label: 'Keys' },
-    { href: '/models', label: 'Models' },
-    { href: '/strategies', label: 'Strategies' },
-    { href: '/tokens', label: 'Tokens' },
-    { href: '/analytics', label: 'Analytics' },
-    { href: '/logs', label: 'Logs' },
-    { href: '/playground', label: 'Playground' },
-    { href: '/settings', label: 'Settings' },
-  ];
+  function closeSidebar(): void {
+    sidebarMobileOpen = false;
+  }
 
-  // Admin-only entries appear when the signed-in principal holds the `admin` role (the server still
-  // enforces the real boundary via RolesGuard; this only hides the UI from non-admins).
-  const adminLinks = [
-    { href: '/admin/users', label: 'Users' },
-    { href: '/admin/settings', label: 'Admin settings' },
-  ];
-
-  const navLinks = $derived(
-    authStore.user?.role === 'admin' ? [...links, ...adminLinks] : links,
-  );
-
-  const current = $derived($page.url.pathname);
-
-  async function logout(): Promise<void> {
-    await authStore.logout();
-    await goto('/login', { replaceState: true });
+  function toggleSidebar(): void {
+    sidebarMobileOpen = !sidebarMobileOpen;
   }
 </script>
 
-<div class="flex min-h-screen">
-  <aside class="hidden w-56 shrink-0 border-r border-border bg-surface md:block">
-    <div class="px-4 py-4 text-lg font-semibold">Free LLM Gateway</div>
-    <nav class="space-y-1 px-2">
-      {#each navLinks as link (link.href)}
-        <a
-          href={link.href}
-          class="block rounded px-3 py-2 text-sm transition {current.startsWith(link.href)
-            ? 'bg-primary text-primary-foreground'
-            : 'hover:bg-background'}"
-        >
-          {link.label}
-        </a>
-      {/each}
-    </nav>
-  </aside>
+<div class="flex min-h-screen bg-background">
+  <!-- Desktop sidebar (always visible on md+) -->
+  <Sidebar class="hidden w-56 shrink-0 md:flex" />
 
+  <!-- Mobile sidebar overlay -->
+  {#if sidebarMobileOpen}
+    <!-- svelte-ignore a11y_interactive_supports_focus -->
+    <div
+      class="fixed inset-0 z-40 bg-surface-overlay animate-fade-in md:hidden"
+      onclick={closeSidebar}
+      onkeydown={(e) => e.key === 'Escape' && closeSidebar()}
+      role="presentation"
+    ></div>
+
+    <div class="fixed inset-y-0 left-0 z-50 w-64 animate-fade-in md:hidden">
+      <Sidebar class="h-full rounded-r-2xl border-r shadow-lg" />
+    </div>
+  {/if}
+
+  <!-- Main content area -->
   <div class="flex min-w-0 flex-1 flex-col">
-    <header class="flex items-center justify-between border-b border-border px-6 py-3">
-      <nav class="flex gap-2 overflow-x-auto md:hidden">
-        {#each navLinks as link (link.href)}
-          <a
-            href={link.href}
-            class="whitespace-nowrap rounded px-2 py-1 text-xs {current.startsWith(link.href)
-              ? 'bg-primary text-primary-foreground'
-              : 'hover:bg-surface'}"
-          >
-            {link.label}
-          </a>
-        {/each}
-      </nav>
-      <div class="ml-auto flex items-center gap-2">
-        <ThemeToggle />
-        <button
-          type="button"
-          class="rounded border border-border px-3 py-1 text-sm hover:bg-surface"
-          onclick={logout}
-        >
-          Sign out
-        </button>
+    <!-- Top bar (desktop) -->
+    <header class="hidden h-14 shrink-0 items-center justify-between border-b border-glass-border bg-surface/60 px-6 backdrop-blur-xl md:flex">
+      <div class="text-sm text-muted">
+        <!-- Breadcrumb placeholder — pages can set via store or pass as snippet -->
+      </div>
+      <div class="flex items-center gap-1.5">
+        <UserMenu />
       </div>
     </header>
-    <main class="min-w-0 flex-1 px-6 py-6">
+
+    <!-- Mobile header -->
+    <header class="flex h-13 shrink-0 items-center justify-between border-b border-glass-border bg-surface/80 px-4 backdrop-blur-xl md:hidden">
+      <button
+        type="button"
+        class="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-background/50 hover:text-foreground"
+        onclick={toggleSidebar}
+        aria-label="Toggle navigation menu"
+      >
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d={sidebarMobileOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
+        </svg>
+      </button>
+      <Logo size="sm" showText={false} />
+      <div class="flex items-center gap-1">
+        <UserMenu class="[&>button]:px-1.5" />
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6">
       {@render children()}
     </main>
+
+    <!-- Mobile bottom nav -->
+    <MobileNav class="md:hidden" />
   </div>
 </div>

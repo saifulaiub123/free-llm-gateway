@@ -20,10 +20,14 @@
   }: Props = $props();
 
   const variants: Record<NonNullable<Props['variant']>, string> = {
-    primary: 'bg-primary text-primary-foreground hover:opacity-90',
-    secondary: 'border border-border bg-surface hover:bg-background',
-    ghost: 'hover:bg-surface',
-    danger: 'border border-red-500/40 text-red-500 hover:bg-red-500/10',
+    primary:
+      'bg-primary text-primary-foreground hover:opacity-90 shadow-sm hover:shadow-md active:scale-[0.97]',
+    secondary:
+      'glass hover:glass-raised active:scale-[0.97]',
+    ghost:
+      'hover:bg-background/50 active:scale-[0.97]',
+    danger:
+      'border border-red-500/40 text-red-500 hover:bg-red-500/10 active:scale-[0.97]',
   };
 </script>
 
@@ -31,7 +35,7 @@
   {type}
   {disabled}
   {onclick}
-  class="inline-flex items-center justify-center rounded px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 {variants[
+  class="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 {variants[
     variant
   ]} {full ? 'w-full' : ''}"
 >

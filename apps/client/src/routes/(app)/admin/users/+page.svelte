@@ -10,6 +10,7 @@
   import TextField from '$lib/components/ui/TextField.svelte';
   import Toggle from '$lib/components/ui/Toggle.svelte';
   import { formatDate } from '$lib/format';
+  import Skeleton from '$lib/components/ui/Skeleton.svelte';
 
   const PAGE_SIZE = 25;
 
@@ -81,45 +82,51 @@
 <PageHeader title="Users" description="Manage accounts, roles, and access. Disabling an account blocks its login." />
 
 <div class="space-y-6">
-  <Card>
-    <h2 class="mb-3 text-sm font-semibold">Add a user</h2>
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
-      <TextField label="Email" type="email" bind:value={email} placeholder="teammate@example.com" />
-      <TextField label="Password" type="password" bind:value={password} autocomplete="new-password" />
-      <Select
-        label="Role"
-        bind:value={role}
-        options={[
-          { value: 'user', label: 'User' },
-          { value: 'admin', label: 'Admin' },
-        ]}
-      />
-      <Button full disabled={adding} onclick={addUser}>Add user</Button>
-    </div>
-    {#if addError}
-      <p class="mt-2 text-sm text-red-500">{addError}</p>
-    {/if}
+  <Card title="Add a user">
+    {#snippet children()}
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+        <TextField label="Email" type="email" bind:value={email} placeholder="teammate@example.com" />
+        <TextField label="Password" type="password" bind:value={password} autocomplete="new-password" />
+        <Select
+          label="Role"
+          bind:value={role}
+          options={[
+            { value: 'user', label: 'User' },
+            { value: 'admin', label: 'Admin' },
+          ]}
+        />
+        <Button full disabled={adding} onclick={addUser}>Add user</Button>
+      </div>
+      {#if addError}
+        <p class="mt-2 text-sm text-red-500">{addError}</p>
+      {/if}
+    {/snippet}
   </Card>
 
   {#if rowError}
-    <p class="text-sm text-red-500">{rowError}</p>
+    <div class="flex items-start gap-2 rounded-lg bg-danger/10 p-3 text-sm text-danger">
+      <svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {rowError}
+    </div>
   {/if}
 
-  <div class="overflow-x-auto rounded-lg border border-border">
+  <div class="overflow-hidden rounded-xl border border-glass-border">
     <table class="w-full text-left text-sm">
-      <thead class="bg-surface text-muted">
-        <tr>
-          <th class="px-4 py-2 font-medium">Email</th>
-          <th class="px-4 py-2 font-medium">Role</th>
-          <th class="px-4 py-2 font-medium">Created</th>
-          <th class="px-4 py-2 font-medium">Enabled</th>
+      <thead>
+        <tr class="bg-surface/50 text-muted">
+          <th class="px-4 py-3 font-medium">Email</th>
+          <th class="px-4 py-3 font-medium">Role</th>
+          <th class="px-4 py-3 font-medium">Created</th>
+          <th class="px-4 py-3 font-medium">Enabled</th>
         </tr>
       </thead>
       <tbody>
         {#each items as user (user.id)}
-          <tr class="border-t border-border">
-            <td class="px-4 py-2 font-medium">{user.email}</td>
-            <td class="px-4 py-2">
+          <tr class="border-t border-glass-border transition-colors hover:bg-background/20">
+            <td class="px-4 py-3 font-medium">{user.email}</td>
+            <td class="px-4 py-3">
               <div class="w-28">
                 <Select
                   value={user.role}
@@ -131,8 +138,8 @@
                 />
               </div>
             </td>
-            <td class="px-4 py-2 text-muted">{formatDate(user.createdAt)}</td>
-            <td class="px-4 py-2">
+            <td class="px-4 py-3 text-muted">{formatDate(user.createdAt)}</td>
+            <td class="px-4 py-3">
               <Toggle
                 checked={user.isActive}
                 label="Enable {user.email}"
@@ -142,7 +149,7 @@
           </tr>
         {:else}
           {#if started && !loading}
-            <tr><td class="px-4 py-6 text-center text-muted" colspan="4">No users.</td></tr>
+            <tr><td class="px-4 py-12 text-center text-muted" colspan="4">No users found.</td></tr>
           {/if}
         {/each}
       </tbody>
@@ -153,9 +160,16 @@
     <p class="text-sm text-red-500">{listError}</p>
   {/if}
 
-  {#if loading}
-    <p class="text-sm text-muted">Loading…</p>
-  {:else if nextCursor !== null}
-    <Button variant="secondary" onclick={loadMore}>Load more</Button>
-  {/if}
+  <div class="flex items-center justify-center">
+    {#if loading}
+      <div class="flex items-center gap-2 text-sm text-muted">
+        <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
+        </svg>
+        Loading users…
+      </div>
+    {:else if nextCursor !== null}
+      <Button variant="secondary" onclick={loadMore}>Load more</Button>
+    {/if}
+  </div>
 </div>

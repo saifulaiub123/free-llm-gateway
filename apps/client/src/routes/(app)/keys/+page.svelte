@@ -11,6 +11,7 @@
   import TextField from '$lib/components/ui/TextField.svelte';
   import { formatDate } from '$lib/format';
   import { keyStatusLabel, keyStatusTone } from '$lib/status';
+  import EmptyState from '$lib/components/ui/EmptyState.svelte';
 
   let providerKey = $state('');
   let apiKey = $state('');
@@ -53,31 +54,39 @@
     {@const nameOf = (id: number) =>
       providers.find((p) => p.id === id)?.displayName ?? `Provider #${id}`}
     <div class="grid gap-6 lg:grid-cols-[20rem_1fr]">
-      <Card>
-        <h2 class="mb-3 text-sm font-semibold">Add a key</h2>
-        <div class="space-y-3">
-          <Select
-            label="Provider"
-            bind:value={providerKey}
-            options={providers.map((p) => ({ value: p.key, label: p.displayName }))}
-          />
-          <TextField label="API key" type="password" bind:value={apiKey} placeholder="sk-…" />
-          <TextField label="Label (optional)" bind:value={label} placeholder="prod-key-1" />
-          {#if error}
-            <p class="text-sm text-red-500">{error}</p>
-          {/if}
-          <Button full disabled={busy} onclick={() => addKey(reload)}>
-            {busy ? 'Validating…' : 'Add key'}
-          </Button>
-        </div>
+      <Card title="Add a key">
+        {#snippet children()}
+          <div class="space-y-3">
+            <Select
+              label="Provider"
+              bind:value={providerKey}
+              options={providers.map((p) => ({ value: p.key, label: p.displayName }))}
+            />
+            <TextField label="API key" type="password" bind:value={apiKey} placeholder="sk-…" />
+            <TextField label="Label (optional)" bind:value={label} placeholder="prod-key-1" />
+            {#if error}
+              <div class="flex items-start gap-2 rounded-lg bg-danger/10 p-3 text-sm text-danger">
+                <svg class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {error}
+              </div>
+            {/if}
+            <Button full disabled={busy} onclick={() => addKey(reload)}>
+              {busy ? 'Validating…' : 'Add key'}
+            </Button>
+          </div>
+        {/snippet}
       </Card>
 
       <div class="space-y-2">
         {#if keys.length === 0}
-          <p class="text-sm text-muted">No keys yet. Add one to start routing.</p>
+          <div class="py-8">
+            <EmptyState title="No keys yet" description="Add a provider key above to start routing requests." />
+          </div>
         {:else}
           {#each keys as key (key.id)}
-            <Card class="flex items-center justify-between">
+            <Card class="!flex-row items-center justify-between" variant="raised">
               <div>
                 <p class="font-medium">{nameOf(key.providerId)}</p>
                 <p class="text-xs text-muted">
@@ -85,7 +94,7 @@
                 </p>
               </div>
               <div class="flex items-center gap-3">
-                <Badge tone={keyStatusTone(key.status)}>{keyStatusLabel(key.status)}</Badge>
+                <Badge tone={keyStatusTone(key.status)} dot>{keyStatusLabel(key.status)}</Badge>
                 <Button variant="danger" onclick={() => removeKey(key.id, reload)}>Remove</Button>
               </div>
             </Card>
