@@ -12,13 +12,13 @@
   import Toggle from '$lib/components/ui/Toggle.svelte';
   import { formatCurrency } from '$lib/format';
 
+  // ── Fetch-models form (unchanged) ──
   let fetchKeyId = $state('');
-  let modelFilter = $state('');
   let notice = $state('');
   let error = $state('');
   let busy = $state(false);
 
-  // Custom model form.
+  // ── Custom model form (unchanged) ──
   let customProvider = $state('');
   let customModelId = $state('');
   let customName = $state('');
@@ -26,10 +26,81 @@
   let customOutputCost = $state('0');
   let customError = $state('');
 
-  const load = (): Promise<[ModelView[], Provider[], ProviderKey[]]> =>
-    Promise.all([modelsApi.list(), providersApi.list(), providersApi.listKeys()]);
+  // ── Pagination + filter state (NEW) ──
+  let items = $state<ModelView[]>([]);
+  let page = $state(1);
+  let perPage = $state(20);
+  let total = $state(0);
+  let loading = $state(false);
+  let filter = $state<Record<string, unknown>>({});
+  let sort = $state<string | undefined>(undefined);
+  // Debounce timer for search input
+  let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
-  async function fetchModels(reload: () => void): Promise<void> {
+  let totalPages = $derived(Math.ceil(total / perPage) || 1);
+
+  // Loads providers + keys only (no models — they load paginated)
+  const loadMeta = (): Promise<[Provider[], ProviderKey[]]> =>
+    Promise.all([providersApi.list(), providersApi.listKeys()]);
+
+  /** Fetch the current page of models from the server. */
+  async function loadModels(resetPage = false): Promise<void> {
+    if (resetPage) page = 1;
+    loading = true;
+    try {
+      const result = await modelsApi.query({
+        page,
+        per_page: perPage,
+        filter: Object.keys(filter).length > 0 ? filter : undefined,
+        sort,
+      });
+      items = result.items;
+      page = result.page;
+      perPage = result.perPage;
+      total = result.total;
+    } catch (err) {
+      error = err instanceof ApiError ? err.message : 'Failed to load models.';
+    } finally {
+      loading = false;
+    }
+  }
+
+  /** Merge a partial filter and reload from page 1. */
+  function applyFilter(partial: Record<string, unknown>): void {
+    // Remove keys with undefined/null values
+    const cleaned: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(partial)) {
+      if (v !== undefined && v !== null && v !== '') {
+        cleaned[k] = v;
+      }
+    }
+    filter = { ...filter, ...cleaned };
+    loadModels(true);
+  }
+
+  /** Reload the current page (used after toggle/fetch/add/delete). */
+  async function reloadPage(): Promise<void> {
+    await loadModels();
+  }
+
+  /** Handle search input with debounce (300ms). */
+  function onSearchInput(e: Event): void {
+    const value = (e.target as HTMLInputElement).value || undefined;
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      applyFilter({ displayName__like: value });
+    }, 300);
+  }
+
+  // Initial load
+  import { onMount } from 'svelte';
+
+  onMount(() => {
+    loadModels();
+  });
+
+  // ── Fetch models (unchanged logic, but reloads the page) ──
+  async function fetchModels(): Promise<void> {
     if (!fetchKeyId) {
       error = 'Choose a key to fetch models for.';
       return;
@@ -40,7 +111,7 @@
     try {
       const result = await modelsApi.fetchForKey(Number(fetchKeyId));
       notice = `Fetched ${result.fetched} models (${result.free} free, enabled by default).`;
-      reload();
+      await reloadPage();
     } catch (err) {
       error = err instanceof ApiError ? err.message : 'Failed to fetch models.';
     } finally {
@@ -48,12 +119,12 @@
     }
   }
 
-  async function toggle(model: ModelView, enabled: boolean, reload: () => void): Promise<void> {
+  async function toggle(model: ModelView, enabled: boolean): Promise<void> {
     await modelsApi.update(model.userModelId, { enabled });
-    reload();
+    await reloadPage();
   }
 
-  async function addCustom(reload: () => void): Promise<void> {
+  async function addCustom(): Promise<void> {
     if (!customProvider || !customModelId.trim() || !customName.trim()) {
       customError = 'Provider, model id, and display name are required.';
       return;
@@ -70,7 +141,7 @@
       });
       customModelId = '';
       customName = '';
-      reload();
+      await reloadPage();
     } catch (err) {
       customError = err instanceof ApiError ? err.message : 'Failed to add custom model.';
     } finally {
@@ -78,31 +149,20 @@
     }
   }
 
-  async function removeCustom(id: number, reload: () => void): Promise<void> {
+  async function removeCustom(id: number): Promise<void> {
     await modelsApi.removeCustom(id);
-    reload();
+    await reloadPage();
   }
 </script>
 
 <PageHeader title="Models" description="Fetch a key's available models, enable the ones you want to route to, or add a custom model." />
 
-<Async {load}>
-  {#snippet children([models, providers, keys], reload)}
+<Async {loadMeta}>
+  {#snippet children([providers, keys], _reloadMeta)}
     {@const providerName = (id: number | null) =>
       id != null
         ? providers.find((p) => p.id === id)?.displayName ?? `Provider #${id}`
         : ''}
-    {@const filteredModels = (modelFilter
-      ? models.filter((m) => {
-          const q = modelFilter.toLowerCase();
-          return (
-            m.displayName.toLowerCase().includes(q) ||
-            m.modelId.toLowerCase().includes(q) ||
-            providerName(m.providerId).toLowerCase().includes(q)
-          );
-        })
-      : models
-    ).toSorted((a, b) => (a.enabled === b.enabled ? 0 : a.enabled ? -1 : 1))}
     <div class="space-y-6">
       <Card title="Fetch free models">
         {#snippet children()}
@@ -117,7 +177,7 @@
                 }))}
               />
             </div>
-            <Button disabled={busy} onclick={() => fetchModels(reload)}>
+            <Button disabled={busy} onclick={fetchModels}>
               {busy ? 'Fetching…' : 'Fetch models'}
             </Button>
           </div>
@@ -148,7 +208,7 @@
             <TextField label="Input $ / 1M" type="number" bind:value={customInputCost} />
             <TextField label="Output $ / 1M" type="number" bind:value={customOutputCost} />
             <div class="flex items-end">
-              <Button full disabled={busy} onclick={() => addCustom(reload)}>Add custom model</Button>
+              <Button full disabled={busy} onclick={addCustom}>Add custom model</Button>
             </div>
           </div>
           {#if customError}
@@ -157,21 +217,41 @@
         {/snippet}
       </Card>
 
-      <div class="flex items-center gap-3">
-        <div class="w-80">
-          <TextField
-            label="Search models"
-            placeholder="Name, model id, or provider…"
-            bind:value={modelFilter}
+      <!-- 🔁 Filter toolbar (NEW — server-side filtering) -->
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex items-center gap-2">
+          <Toggle
+            label="Enabled only"
+            checked={filter.enabled === true}
+            onchange={(v) => applyFilter({ enabled: v || undefined })}
+          />
+          <Toggle
+            label="Free only"
+            checked={filter.isFree === true}
+            onchange={(v) => applyFilter({ isFree: v || undefined })}
           />
         </div>
-        {#if modelFilter}
-          <span class="text-xs text-muted">
-            {filteredModels.length} of {models.length} models match
-          </span>
-        {/if}
+        <div class="w-44">
+          <Select
+            label="Provider"
+            bind:value={customProvider}
+            options={[
+              { value: '', label: 'All providers' },
+              ...providers.map((p) => ({ value: String(p.id), label: p.displayName })),
+            ]}
+            onchange={(v) => applyFilter({ providerId: v ? Number(v) : undefined })}
+          />
+        </div>
+        <div class="w-60">
+          <TextField
+            label="Search name"
+            placeholder="gpt, claude, …"
+            oninput={onSearchInput}
+          />
+        </div>
       </div>
 
+      <!-- 🔁 Table — now reads from `items` instead of `filteredModels` -->
       <div class="overflow-hidden rounded-xl border border-glass-border">
         <table class="w-full text-left text-sm">
           <thead>
@@ -185,7 +265,7 @@
             </tr>
           </thead>
           <tbody>
-            {#each filteredModels as model (model.userModelId)}
+            {#each items as model (model.userModelId)}
               <tr class="border-t border-glass-border transition-colors hover:bg-background/20">
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-2">
@@ -212,12 +292,12 @@
                   <Toggle
                     checked={model.enabled}
                     label="Enable {model.displayName}"
-                    onchange={(value) => toggle(model, value, reload)}
+                    onchange={(value) => toggle(model, value)}
                   />
                 </td>
                 <td class="px-4 py-3 text-right">
                   {#if model.isCustom}
-                    <Button variant="ghost" onclick={() => removeCustom(model.userModelId, reload)}>
+                    <Button variant="ghost" onclick={() => removeCustom(model.userModelId)}>
                       Delete
                     </Button>
                   {/if}
@@ -226,13 +306,45 @@
             {:else}
               <tr>
                 <td class="px-4 py-12 text-center text-muted" colspan="6">
-                  No models yet — fetch a key's models above.
+                  {loading ? 'Loading…' : 'No models match your filters.'}
                 </td>
               </tr>
             {/each}
           </tbody>
         </table>
       </div>
+
+      <!-- 🔁 Pagination controls (NEW) -->
+      {#if totalPages > 1}
+        <div class="flex items-center justify-center gap-4">
+          <button
+            type="button"
+            class="rounded-lg border border-glass-border px-3 py-1.5 text-sm transition-colors hover:bg-surface/50 disabled:opacity-40"
+            disabled={page <= 1 || loading}
+            onclick={() => { page--; loadModels(); }}
+          >
+            ← Previous
+          </button>
+          <span class="text-sm text-muted">
+            Page {page} of {totalPages}
+            <span class="ml-1 tabular-nums">({total} models)</span>
+          </span>
+          <button
+            type="button"
+            class="rounded-lg border border-glass-border px-3 py-1.5 text-sm transition-colors hover:bg-surface/50 disabled:opacity-40"
+            disabled={page >= totalPages || loading}
+            onclick={() => { page++; loadModels(); }}
+          >
+            Next →
+          </button>
+        </div>
+      {/if}
+
+      {#if loading}
+        <div class="flex items-center justify-center py-4 text-sm text-muted">
+          Loading models…
+        </div>
+      {/if}
     </div>
   {/snippet}
 </Async>
