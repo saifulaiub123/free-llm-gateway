@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
-import { requestLogs, DatabaseService } from '../../database/index.js';
+import { and, desc, eq, getTableColumns, gte, lt, sql } from 'drizzle-orm';
+import { requestLogs, models, DatabaseService } from '../../database/index.js';
 import { BaseRepository } from '../../common/db/base.repository.js';
 
 /** Aggregated usage totals over a time window (basis for the analytics summary). */
@@ -21,9 +21,15 @@ export interface ProviderUsageRow {
   totalCostSaved: number;
 }
 
+/** A request-log row extended with the resolved display name from the models catalog. */
+export interface LogItem extends Omit<typeof requestLogs.$inferSelect, 'routedModel'> {
+  routedModel: string | null;
+  routedModelDisplay: string | null;
+}
+
 /** One page of request logs plus the cursor to fetch the next page. */
 export interface LogPage {
-  items: (typeof requestLogs.$inferSelect)[];
+  items: LogItem[];
   nextCursor: number | null;
 }
 
@@ -83,8 +89,12 @@ export class RequestLogRepository extends BaseRepository<typeof requestLogs> {
       ? and(eq(requestLogs.userId, userId), lt(requestLogs.id, cursor))
       : eq(requestLogs.userId, userId);
     const rows = await this.exec()
-      .select()
+      .select({
+        ...getTableColumns(requestLogs),
+        routedModelDisplay: models.displayName,
+      })
       .from(requestLogs)
+      .leftJoin(models, eq(requestLogs.routedModel, models.modelId))
       .where(predicate)
       .orderBy(desc(requestLogs.id))
       .limit(limit + 1); // fetch one extra to detect a next page

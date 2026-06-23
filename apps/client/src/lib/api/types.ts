@@ -136,6 +136,8 @@ export interface RequestLog {
   requestedModel: string;
   routedProvider: string | null;
   routedModel: string | null;
+  /** Display name from the models catalog (e.g. "Gemini 2.0 Flash"), or null if not resolved. */
+  routedModelDisplay: string | null;
   fallbackAttempts: number;
   latencyMs: number;
   inputTokens: number;

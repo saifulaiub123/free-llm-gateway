@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { createDb, type Db, type DatabaseService } from '../../database/index.js';
 import { RequestLogRepository } from './request-log.repository.js';
 
-const CREATE_TABLE = sql`CREATE TABLE request_logs (
+const CREATE_REQUEST_LOGS = sql`CREATE TABLE request_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   user_id INTEGER NOT NULL,
@@ -20,9 +20,27 @@ const CREATE_TABLE = sql`CREATE TABLE request_logs (
   status TEXT NOT NULL
 )`;
 
+/** Minimal models table for the LEFT JOIN in page(). */
+const CREATE_MODELS = sql`CREATE TABLE models (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  provider_id INTEGER NOT NULL,
+  model_id TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  is_free INTEGER DEFAULT 0 NOT NULL,
+  intelligence_score REAL DEFAULT 0 NOT NULL,
+  speed_tier TEXT DEFAULT 'medium' NOT NULL,
+  input_cost_per_1m REAL DEFAULT 0 NOT NULL,
+  output_cost_per_1m REAL DEFAULT 0 NOT NULL,
+  context_window INTEGER,
+  capabilities TEXT NOT NULL DEFAULT '{}',
+  stability_baseline REAL DEFAULT 0.9 NOT NULL
+)`;
+
 async function freshDb(): Promise<Db> {
   const db = createDb();
-  await db.run(CREATE_TABLE);
+  await db.run(CREATE_REQUEST_LOGS);
+  await db.run(CREATE_MODELS);
   return db;
 }
 
