@@ -7,7 +7,7 @@ import type { DiscoveredModel } from '../base/types.js';
  */
 export class OpenCodeAdapter extends OpenAiCompatibleAdapter {
   readonly providerKey = 'opencode';
-  protected readonly baseUrl = 'https://opencode.ai/v1';
+  protected readonly baseUrl = 'https://opencode.ai/zen/v1';
 
   classifyFreeModels(models: DiscoveredModel[]): DiscoveredModel[] {
     return this.markAllFree(models);

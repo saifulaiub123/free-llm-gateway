@@ -98,7 +98,7 @@ export class FallbackExecutor {
         lastError = error as Error;
         this.stats.recordOutcome(userId, candidate.modelId, false, Date.now() - startedAt);
         if (!this.isRetryable(error)) {
-          throw error; // e.g. 400 bad request — surface immediately, no fallback
+          //throw error; // e.g. 400 bad request — surface immediately, no fallback
         }
         // 429 / 5xx / timeout — cool the key down and try the next candidate.
         this.cooldown.placeOnCooldown({ keyId: candidate.keyId }, BASE_COOLDOWN_MS, this.reasonOf(error));
@@ -161,6 +161,7 @@ export class FallbackExecutor {
       } catch (error) {
         lastError = error as Error;
         this.stats.recordOutcome(userId, candidate.modelId, false, Date.now() - startedAt);
+        //Need to handle if payment required error occurs, we should not retry in that case
         if (!this.isRetryable(error)) {
           throw error;
         }
