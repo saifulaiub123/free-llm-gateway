@@ -82,3 +82,84 @@ export class CreateCustomModelDto {
   @IsObject()
   capabilities?: Record<string, boolean>;
 }
+
+// ── Paginated query DTOs ────────────────────────────────────────────
+
+/** A page of models returned by the queryable models endpoint. */
+export class ModelPageDto {
+  @ApiProperty({ type: [UserModelDto] })
+  items!: UserModelDto[];
+
+  @ApiProperty({ type: Number, description: 'Current page number (1-based).' })
+  page!: number;
+
+  @ApiProperty({ type: Number, description: 'Number of items per page.' })
+  perPage!: number;
+
+  @ApiProperty({ type: Number, description: 'Total number of matching items across all pages.' })
+  total!: number;
+}
+
+/** Describes one filterable column and its allowed operators. */
+export class FilterColumnInfoDto {
+  @ApiProperty({
+    example: 'displayName',
+    description: 'Column name in the API, usable as a JSON `filter` key.',
+  })
+  field!: string;
+
+  @ApiProperty({
+    example: ['eq', 'like'],
+    description: 'Operators usable on this column: eq, gt, gte, lt, lte, like, in.',
+  })
+  operators!: string[];
+}
+
+/** Describes one sortable column. */
+export class SortColumnInfoDto {
+  @ApiProperty({
+    example: 'displayName',
+    description: 'Column name in the API, usable in the `sort` param.',
+  })
+  field!: string;
+
+  @ApiProperty({ example: 'desc', description: 'Default sort direction.' })
+  defaultDirection!: string;
+}
+
+/**
+ * Returned by `GET /api/v1/models/query-config` — shows Swagger users
+ * (and the client) exactly which columns are filterable/sortable and with
+ * which operators. This makes the dynamic JSON filter schema discoverable.
+ */
+export class ModelQueryInfoDto {
+  @ApiProperty({
+    type: [FilterColumnInfoDto],
+    description: 'Columns available for JSON `filter` param, with their allowed operators.',
+    example: [
+      { field: 'enabled', operators: ['eq'] },
+      { field: 'displayName', operators: ['eq', 'like'] },
+      { field: 'intelligenceScore', operators: ['eq', 'gt', 'gte', 'lt', 'lte'] },
+    ],
+  })
+  filterableColumns!: FilterColumnInfoDto[];
+
+  @ApiProperty({
+    type: [SortColumnInfoDto],
+    description: 'Columns available for `sort` param.',
+    example: [
+      { field: 'id', defaultDirection: 'desc' },
+      { field: 'displayName', defaultDirection: 'desc' },
+    ],
+  })
+  sortableColumns!: SortColumnInfoDto[];
+
+  @ApiProperty({ example: 1, description: 'Default page number.' })
+  defaultPage!: number;
+
+  @ApiProperty({ example: 20, description: 'Default items per page.' })
+  defaultPerPage!: number;
+
+  @ApiProperty({ example: 100, description: 'Maximum allowed items per page.' })
+  maxPerPage!: number;
+}

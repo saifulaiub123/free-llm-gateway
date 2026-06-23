@@ -7,6 +7,8 @@ import { ModelRepository } from './model.repository.js';
 import { UserModelRepository } from './user-model.repository.js';
 import { ModelMetadataService } from './model-metadata.service.js';
 import { models as modelsTable, userModels as userModelsTable } from '../../database/index.js';
+import type { Page } from '../../common/pipes/query.types.js';
+import type { ModelQuery } from './dto/model-query.schema.js';
 
 /** Result of a fetch-models run: total models persisted and how many are free. */
 export interface FetchModelsResult {
@@ -97,6 +99,34 @@ export class ModelsService {
       modelId: view.modelId,
       providerKey: view.providerId !== null ? (providerKeyById.get(view.providerId) ?? 'custom') : 'custom',
     }));
+  }
+
+  /**
+   * Paginated, filtered, sorted version of `listForUser`.
+   *
+   * WHY keep both: `listForUser` is used by the OpenAI-compatible `/v1/models` gateway
+   * endpoint (always-all, no pagination), while `listForUserPage` serves the management
+   * API dashboard with dynamic query support. A single endpoint for both would break the
+   * gateway contract.
+   */
+  async listForUserPage(userId: number, query: ModelQuery): Promise<Page<ModelView>> {
+    const page = await this.userModels.listByUserPage(userId, query);
+    const catalogIds = page.items
+      .filter((row) => row.modelId !== null)
+      .map((row) => row.modelId as number);
+    const catalog =
+      catalogIds.length > 0 ? await this.models.findByIds(catalogIds) : [];
+    const byId = new Map(catalog.map((m) => [m.id, m]));
+    return {
+      items: page.items.map((row) =>
+        row.isCustom
+          ? this.toCustomView(row)
+          : this.toCatalogView(row, byId.get(row.modelId as number)),
+      ),
+      page: page.page,
+      perPage: page.perPage,
+      total: page.total,
+    };
   }
 
   /** Enables/disables a user model or sets overrides. Throws `404` when the row is not the caller's. */

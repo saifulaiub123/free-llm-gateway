@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -16,18 +17,25 @@ import {
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import type { CurrentUser as Principal } from '../auth/auth.types.js';
 import { ModelsService, type FetchModelsResult, type ModelView } from './models.service.js';
 import {
   CreateCustomModelDto,
   FetchModelsResultDto,
+  ModelPageDto,
+  ModelQueryInfoDto,
   UpdateUserModelDto,
   UserModelDto,
 } from './dto/model.dto.js';
+import { ModelQuerySchema } from './dto/model-query.schema.js';
+import type { ModelQuery } from './dto/model-query.schema.js';
+import { modelFilterConfig, modelSortableColumns } from './dto/model-query.schema.js';
 
 /** On-demand model discovery + per-user model catalog. JWT-guarded management API. */
 @ApiTags('models')
@@ -50,11 +58,96 @@ export class ModelsController {
     return this.models.fetchModelsForKey(user.id, keyId);
   }
 
+  @Get('models/query-config')
+  @ApiOperation({
+    summary: 'Get filterable/sortable column configuration for the models endpoint.',
+    description:
+      'Returns the full column whitelist with allowed operators — useful for both Swagger consumers and dynamic filter UIs in the client.',
+  })
+  @ApiOkResponse({ type: ModelQueryInfoDto })
+  getQueryConfig(): ModelQueryInfoDto {
+    const filterableColumns = Object.entries(modelFilterConfig).map(
+      ([field, cfg]) => ({
+        field,
+        operators: [...cfg.operators],
+      }),
+    );
+    const sortableColumns = modelSortableColumns.map((field) => ({
+      field,
+      defaultDirection: 'desc',
+    }));
+    return {
+      filterableColumns,
+      sortableColumns,
+      defaultPage: 1,
+      defaultPerPage: 20,
+      maxPerPage: 100,
+    };
+  }
+
   @Get('models')
-  @ApiOperation({ summary: "List the caller's model catalog with enabled flags." })
-  @ApiOkResponse({ type: UserModelDto, isArray: true })
-  list(@CurrentUser() user: Principal): Promise<ModelView[]> {
-    return this.models.listForUser(user.id);
+  @ApiOperation({
+    summary: 'Query models with dynamic filter, sort, search, and pagination.',
+    description: `
+**Filterable columns** (use JSON \`filter\` param):
+- \`enabled\` — eq
+- \`isCustom\` — eq
+- \`customProviderId\` — eq
+- \`providerId\` — eq
+- \`isFree\` — eq
+- \`displayName\` — eq, like
+- \`speedTier\` — eq, in
+- \`intelligenceScore\` — eq, gt, gte, lt, lte
+- \`contextWindow\` — eq, gt, gte, lt, lte
+- \`inputCostPer1m\` — eq, gte, lte
+- \`outputCostPer1m\` — eq, gte, lte
+- \`stabilityBaseline\` — eq, gte
+- \`createdAt\` — gt, gte, lt, lte
+
+**Sortable columns** (use \`sort\` param):
+\`id\`, \`createdAt\`, \`enabled\`
+
+**Examples** (click "Try it out"):
+- \`?page=1&per_page=20\`
+- \`?filter={"enabled":true}&sort=id:desc&page=1&per_page=20\`
+- \`?filter={"displayName__like":"gpt"}&per_page=20\`
+    `,
+  })
+  @ApiOkResponse({ type: ModelPageDto })
+  @ApiQuery({
+    name: 'page',
+    type: Number,
+    required: false,
+    example: 1,
+    description: 'Page number (1-based).',
+  })
+  @ApiQuery({
+    name: 'per_page',
+    type: Number,
+    required: false,
+    example: 20,
+    description: 'Items per page (max 100).',
+  })
+  @ApiQuery({
+    name: 'filter',
+    type: String,
+    required: false,
+    description:
+      'JSON filter object. See @ApiOperation description for filterable columns and operators.',
+    example: '{"enabled":true,"displayName__like":"gpt"}',
+  })
+  @ApiQuery({
+    name: 'sort',
+    type: String,
+    required: false,
+    description: 'Column name and direction. See @ApiOperation for sortable columns.',
+    example: 'displayName:asc',
+  })
+  list(
+    @CurrentUser() user: Principal,
+    @Query(new ZodValidationPipe(ModelQuerySchema)) query: ModelQuery,
+  ): Promise<ModelPageDto> {
+    return this.models.listForUserPage(user.id, query);
   }
 
   @Patch('models/:userModelId')
