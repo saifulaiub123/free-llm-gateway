@@ -22,7 +22,7 @@
     onsaved: () => void;
   }
 
-  let { strategy, models, providers, onsaved }: Props = $props();
+  let { strategy, models = [], providers, onsaved }: Props = $props();
 
   type Weights = {
     cost: number;

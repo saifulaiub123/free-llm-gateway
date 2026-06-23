@@ -1,8 +1,8 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { modelsApi, providersApi, strategiesApi } from '$lib/api';
   import { ApiError } from '$lib/api/error';
   import type { ModelView, Provider, StrategyType, StrategyView } from '$lib/api/types';
-  import Async from '$lib/components/Async.svelte';
   import StrategyConfigPanel from '$lib/components/StrategyConfigPanel.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
   import Button from '$lib/components/ui/Button.svelte';
@@ -20,14 +20,31 @@
   let busy = $state(false);
   let showCreateForm = $state(false);
 
-  // 🔁 No modelsApi.list() — load only strategies + providers
-  const load = (): Promise<[StrategyView[], Provider[]]> =>
-    Promise.all([strategiesApi.list(), providersApi.list()]);
+  // 🔁 Data loaded by onMount — avoids Async component's template-reactivity gap
+  let strategies = $state<StrategyView[]>([]);
+  let providers = $state<Provider[]>([]);
+  let loading = $state(true);
+  let loadError = $state('');
 
-  // 🔁 Per-strategy model cache — non-reactive Map (lookup only, not rendered)
+  // 🔁 Per-strategy model cache — non-reactive Map
   const modelCache = new Map<number, ModelView[]>();
   let selectedModels = $state<ModelView[]>([]);
   let modelsLoading = $state(false);
+
+  onMount(async () => {
+    try {
+      const [s, p] = await Promise.all([strategiesApi.list(), providersApi.list()]);
+      strategies = s;
+      providers = p;
+      // Auto-select the default or first strategy
+      const best = s.find((x) => x.isDefault) ?? s[0];
+      if (best) selectedId = best.id;
+    } catch (err) {
+      loadError = err instanceof ApiError ? err.message : 'Failed to load.';
+    } finally {
+      loading = false;
+    }
+  });
 
   // When selectedId changes, load models from cache or API.
   // WHY $effect instead of {#await}: Svelte 5 forbids mutating $state inside
@@ -42,7 +59,6 @@
       return;
     }
 
-    // Defer the async load so state mutations don't run during effect evaluation
     queueMicrotask(async () => {
       modelsLoading = true;
       try {
@@ -90,7 +106,21 @@
     return map[type];
   }
 
-  async function create(reload: () => void): Promise<void> {
+  async function reload(): Promise<void> {
+    try {
+      const [s, p] = await Promise.all([strategiesApi.list(), providersApi.list()]);
+      strategies = s;
+      providers = p;
+      if (selectedId === null) {
+        const best = s.find((x) => x.isDefault) ?? s[0];
+        if (best) selectedId = best.id;
+      }
+    } catch (err) {
+      loadError = err instanceof ApiError ? err.message : 'Failed to reload.';
+    }
+  }
+
+  async function create(): Promise<void> {
     if (!newName.trim()) {
       error = 'Name is required.';
       return;
@@ -102,7 +132,7 @@
       newName = '';
       selectedId = created.id;
       showCreateForm = false;
-      reload();
+      await reload();
     } catch (err) {
       error = err instanceof ApiError ? err.message : 'Failed to create strategy.';
     } finally {
@@ -110,112 +140,114 @@
     }
   }
 
-  async function makeDefault(id: number, reload: () => void): Promise<void> {
+  async function makeDefault(id: number): Promise<void> {
     await strategiesApi.setDefault(id);
-    reload();
+    await reload();
   }
 </script>
 
 <PageHeader title="Routing strategies" description="Pick how the gateway orders fallback candidates. The default strategy is used when a request sends no override header." />
 
-<Async {load}>
-  {#snippet children([strategies, providers], reload)}
-    {@const selected = resolveSelected(strategies)}
-    <div class="flex gap-6">
-      <!-- Left sidebar: ultra-compact strategy list -->
-      <div class="w-60 shrink-0 space-y-3">
-        {#if showCreateForm}
-          <div class="rounded-lg border border-glass-border bg-surface/50 p-3">
-            <div class="mb-2 flex items-center justify-between">
-              <span class="text-xs font-semibold">New strategy</span>
-              <button type="button" aria-label="Close" class="text-muted hover:text-foreground" onclick={() => { showCreateForm = false; error = ''; }}>
-                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div class="space-y-2">
-              <Select
-                label="Type"
-                bind:value={newType}
-                options={TYPES.map((type) => ({ value: type, label: type.replace('_', ' ') }))}
-              />
-              <TextField label="Name" bind:value={newName} placeholder="My router" />
-              {#if error}
-                <p class="text-xs text-red-500">{error}</p>
-              {/if}
-              <div class="flex gap-2">
-                <Button size="sm" disabled={busy} onclick={() => create(reload)}>Create</Button>
-                <Button size="sm" variant="ghost" onclick={() => { showCreateForm = false; error = ''; }}>Cancel</Button>
-              </div>
+{#if loading}
+  <div class="flex h-40 items-center justify-center text-sm text-muted">Loading…</div>
+{:else if loadError}
+  <div class="flex h-40 items-center justify-center text-sm text-red-500">{loadError}</div>
+{:else}
+  {@const selected = resolveSelected(strategies)}
+  <div class="flex gap-6">
+    <!-- Left sidebar: ultra-compact strategy list -->
+    <div class="w-60 shrink-0 space-y-3">
+      {#if showCreateForm}
+        <div class="rounded-lg border border-glass-border bg-surface/50 p-3">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="text-xs font-semibold">New strategy</span>
+            <button type="button" aria-label="Close" class="text-muted hover:text-foreground" onclick={() => { showCreateForm = false; error = ''; }}>
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="space-y-2">
+            <Select
+              label="Type"
+              bind:value={newType}
+              options={TYPES.map((type) => ({ value: type, label: type.replace('_', ' ') }))}
+            />
+            <TextField label="Name" bind:value={newName} placeholder="My router" />
+            {#if error}
+              <p class="text-xs text-red-500">{error}</p>
+            {/if}
+            <div class="flex gap-2">
+              <Button size="sm" disabled={busy} onclick={create}>Create</Button>
+              <Button size="sm" variant="ghost" onclick={() => { showCreateForm = false; error = ''; }}>Cancel</Button>
             </div>
           </div>
-        {:else}
+        </div>
+      {:else}
+        <button
+          type="button"
+          class="flex w-full items-center gap-2 rounded-lg border border-dashed border-glass-border px-3 py-2 text-xs text-muted transition-colors hover:border-primary hover:text-primary"
+          onclick={() => showCreateForm = true}
+        >
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14m-7-7h14" />
+          </svg>
+          Create strategy
+        </button>
+      {/if}
+
+      <div class="space-y-1">
+        {#each strategies as strategy (strategy.id)}
           <button
             type="button"
-            class="flex w-full items-center gap-2 rounded-lg border border-dashed border-glass-border px-3 py-2 text-xs text-muted transition-colors hover:border-primary hover:text-primary"
-            onclick={() => showCreateForm = true}
+            class="flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-all {selected?.id === strategy.id
+              ? 'border-primary bg-primary/10 text-foreground'
+              : 'border-transparent text-muted hover:border-glass-border hover:bg-surface/50 hover:text-foreground'}"
+            onclick={() => (selectedId = strategy.id)}
           >
-            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 5v14m-7-7h14" />
-            </svg>
-            Create strategy
+            <span class="shrink-0 text-xs leading-none">{typeIcon(strategy.type)}</span>
+            <span class="flex-1 truncate font-medium">{strategy.name}</span>
+            {#if strategy.isDefault}
+              <Badge tone="success" dot />
+            {/if}
+            <span class="shrink-0 tabular-nums text-muted">enabled</span>
           </button>
-        {/if}
-
-        <div class="space-y-1">
-          {#each strategies as strategy (strategy.id)}
-            <button
-              type="button"
-              class="flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-all {selected?.id === strategy.id
-                ? 'border-primary bg-primary/10 text-foreground'
-                : 'border-transparent text-muted hover:border-glass-border hover:bg-surface/50 hover:text-foreground'}"
-              onclick={() => (selectedId = strategy.id)}
-            >
-              <span class="shrink-0 text-xs leading-none">{typeIcon(strategy.type)}</span>
-              <span class="flex-1 truncate font-medium">{strategy.name}</span>
-              {#if strategy.isDefault}
-                <Badge tone="success" dot />
-              {/if}
-              <span class="shrink-0 tabular-nums text-muted">enabled</span>
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <!-- Right: config panel with per-click model loading -->
-      <div class="min-w-0 flex-1">
-        {#if selected}
-          <Card>
-            <div class="mb-4 flex items-center justify-between">
-              <div>
-                <h2 class="text-lg font-semibold">{selected.name}</h2>
-                <p class="text-xs text-muted">{typeDesc(selected.type)}</p>
-              </div>
-              {#if !selected.isDefault}
-                <Button variant="ghost" size="sm" onclick={() => makeDefault(selected.id, reload)}>
-                  Set as default
-                </Button>
-              {:else}
-                <Badge tone="success">default</Badge>
-              {/if}
-            </div>
-            {#key selected.id}
-              {#if modelsLoading}
-                <div class="flex h-40 items-center justify-center text-sm text-muted">
-                  Loading models…
-                </div>
-              {:else}
-                <StrategyConfigPanel strategy={selected} models={selectedModels} {providers} onsaved={reload} />
-              {/if}
-            {/key}
-          </Card>
-        {:else}
-          <div class="flex h-40 items-center justify-center rounded-xl border border-dashed border-glass-border text-sm text-muted">
-            Create a strategy to configure routing.
-          </div>
-        {/if}
+        {/each}
       </div>
     </div>
-  {/snippet}
-</Async>
+
+    <!-- Right: config panel with per-click model loading -->
+    <div class="min-w-0 flex-1">
+      {#if selected}
+        <Card>
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold">{selected.name}</h2>
+              <p class="text-xs text-muted">{typeDesc(selected.type)}</p>
+            </div>
+            {#if !selected.isDefault}
+              <Button variant="ghost" size="sm" onclick={() => makeDefault(selected.id)}>
+                Set as default
+              </Button>
+            {:else}
+              <Badge tone="success">default</Badge>
+            {/if}
+          </div>
+          {#key selected.id}
+            {#if modelsLoading}
+              <div class="flex h-40 items-center justify-center text-sm text-muted">
+                Loading models…
+              </div>
+            {:else}
+              <StrategyConfigPanel strategy={selected} models={selectedModels} {providers} onsaved={reload} />
+            {/if}
+          {/key}
+        </Card>
+      {:else}
+        <div class="flex h-40 items-center justify-center rounded-xl border border-dashed border-glass-border text-sm text-muted">
+          Create a strategy to configure routing.
+        </div>
+      {/if}
+    </div>
+  </div>
+{/if}
