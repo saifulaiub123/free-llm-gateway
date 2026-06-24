@@ -21,6 +21,7 @@ function candidate(userModelId: number, overrides: Partial<RoutingCandidate> = {
     available: true,
     rateLimitHeadroom: 1,
     capabilities: { vision: false, tools: false, json: true },
+    contextWindow: 128000,
     position: 0,
     ...overrides,
   };

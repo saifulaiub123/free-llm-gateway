@@ -17,6 +17,7 @@ function makeCandidate(overrides: Partial<RoutingCandidate> = {}): RoutingCandid
     stability: 1,
     available: true,
     rateLimitHeadroom: 1,
+    contextWindow: 128000,
     capabilities: { vision: false, tools: false, json: true },
     position: 0,
     ...overrides,
@@ -49,5 +50,31 @@ describe('ChainFilter (TEST-004)', () => {
     const textOnly = makeCandidate({ modelId: 3 });
     const result = filter.filter([visionCapable, textOnly], { vision: true });
     expect(result.map((candidate) => candidate.modelId)).toEqual([2]);
+  });
+
+  it('drops candidates whose context window is smaller than estimated input tokens', () => {
+    const bigWindow = makeCandidate({ modelId: 2, contextWindow: 128000 });
+    const smallWindow = makeCandidate({ modelId: 3, contextWindow: 8000 });
+    const result = filter.filter([bigWindow, smallWindow], { estimatedInputTokens: 32000 });
+    expect(result.map((candidate) => candidate.modelId)).toEqual([2]);
+  });
+
+  it('skips context-window check when contextWindow is null (unknown)', () => {
+    const result = filter.filter([makeCandidate({ contextWindow: null })], {
+      estimatedInputTokens: 999999,
+    });
+    expect(result).toHaveLength(1);
+  });
+
+  it('skips context-window check when estimatedInputTokens is absent', () => {
+    const result = filter.filter([makeCandidate({ contextWindow: 1000 })], {});
+    expect(result).toHaveLength(1);
+  });
+
+  it('keeps a candidate when contextWindow exactly equals estimatedInputTokens', () => {
+    const result = filter.filter([makeCandidate({ contextWindow: 32000 })], {
+      estimatedInputTokens: 32000,
+    });
+    expect(result).toHaveLength(1);
   });
 });

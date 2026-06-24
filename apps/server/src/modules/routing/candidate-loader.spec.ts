@@ -27,6 +27,7 @@ function build(options: { keyStatus?: string; inCooldown?: boolean } = {}) {
       outputCostPer1m: 0,
       intelligenceScore: 60,
       speedTier: 'fast',
+      contextWindow: 128000,
       capabilities: CAPS,
     },
   ]);

@@ -7,7 +7,13 @@ import type { RequestCapabilities, RoutingCandidate } from './types/routing-cand
  * WHY a dedicated class (SRP): filtering and ordering are different responsibilities — keeping them
  * apart makes each trivially testable and lets every strategy reuse the exact same eligibility rules.
  * A candidate survives only if it is available (healthy key, not in cooldown), has rate-limit headroom,
- * and supports every capability the request requires.
+ * supports every capability the request requires, AND its context window can fit the estimated input
+ * tokens.
+ *
+ * Context-window check: when the request provides an estimated token count AND the model declares a
+ * known `contextWindow`, candidates whose window is smaller than the estimate are dropped so the
+ * upstream provider never sees a request guaranteed to fail with a context-length error. Unknown
+ * contextWindow or unknown estimate → skip the check (let the upstream decide).
  */
 @Injectable()
 export class ChainFilter {
@@ -17,7 +23,8 @@ export class ChainFilter {
       (candidate) =>
         candidate.available &&
         candidate.rateLimitHeadroom > 0 &&
-        this.capabilityMatch(candidate, required),
+        this.capabilityMatch(candidate, required) &&
+        this.contextWindowMatch(candidate, required),
     );
   }
 
@@ -33,5 +40,22 @@ export class ChainFilter {
       return false;
     }
     return true;
+  }
+
+  /**
+   * True when the candidate's context window can fit the estimated input token count.
+   *
+   * WHY skipped when either value is absent: a null contextWindow or null estimatedInputTokens means
+   * the data isn't available — we let the upstream provider make the final determination rather than
+   * reject prematurely.
+   */
+  private contextWindowMatch(
+    candidate: RoutingCandidate,
+    required: RequestCapabilities,
+  ): boolean {
+    if (required.estimatedInputTokens == null || candidate.contextWindow == null) {
+      return true; // unknown window or unknown estimate — let upstream decide
+    }
+    return candidate.contextWindow >= required.estimatedInputTokens;
   }
 }

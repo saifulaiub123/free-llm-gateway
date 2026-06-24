@@ -18,6 +18,7 @@ function candidate(modelId: number, providerKey: string, costPer1m: number): Rou
     available: true,
     rateLimitHeadroom: 1,
     capabilities: { vision: false, tools: false, json: true },
+    contextWindow: 128000,
     position: 0,
   };
 }

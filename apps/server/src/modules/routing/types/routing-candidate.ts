@@ -31,6 +31,8 @@ export interface RoutingCandidate {
   available: boolean;
   /** Fraction of rate-limit caps remaining, 0..1. */
   rateLimitHeadroom: number;
+  /** Context-window size of the model (# tokens). Null when unknown (let upstream decide). */
+  contextWindow: number | null;
   /** Capability flags used by `ChainFilter` to honor request requirements. */
   capabilities: { vision: boolean; tools: boolean; json: boolean };
   /** Saved manual position for `Manual.fixed`. */
@@ -59,6 +61,8 @@ export interface RequestCapabilities {
   vision?: boolean;
   tools?: boolean;
   json?: boolean;
+  /** Estimated input tokens from the messages array. Null when not computed (skips window check). */
+  estimatedInputTokens?: number;
 }
 
 /** Balanced-strategy default weights (sum to 1.0) applied when a strategy omits its own. */

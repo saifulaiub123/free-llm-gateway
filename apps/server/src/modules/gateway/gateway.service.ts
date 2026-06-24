@@ -48,12 +48,17 @@ export class GatewayService {
       this.capsOf(body),
     );
     // WHY: an empty chain means no enabled model satisfies the request's required capabilities
-    // (e.g. an image request with no vision-capable model). Surface it as 422 with a stable
-    // machine-readable `code` rather than letting the executor return a misleading 503.
+    // (e.g. an image request with no vision-capable model, or all models' context windows are too
+    // small). Surface it as 422 with a stable machine-readable `code` rather than letting the
+    // executor return a misleading 503.
     if (chain.length === 0) {
+      const est = this.estimateInputTokens(body);
       throw new UnprocessableEntityException({
         code: 'no_capable_model',
-        message: 'No enabled model satisfies the requested capabilities',
+        message:
+          est > 0
+            ? `No enabled model satisfies the requested capabilities or can fit the estimated ${est} input tokens in its context window`
+            : 'No enabled model satisfies the requested capabilities',
       });
     }
     return chain;
@@ -62,13 +67,33 @@ export class GatewayService {
   /**
    * Derives required capabilities from the request so `ChainFilter` restricts candidates (TASK-053):
    * image content → vision, a non-empty `tools` array → tools, `response_format: json_object` → json.
+   *
+   * Also estimates input tokens so `ChainFilter` can drop models whose context window is too small.
    */
   capsOf(body: ChatRequest): RequestCapabilities {
     return {
       vision: this.hasImageContent(body),
       tools: Array.isArray(body.tools) && body.tools.length > 0,
       json: this.wantsJsonMode(body),
+      estimatedInputTokens: this.estimateInputTokens(body),
     };
+  }
+
+  /**
+   * Estimates input-token count from the messages array (rough heuristic: 1 token ≈ 4 chars).
+   *
+   * WHY a simple character-based estimate: an exact count requires a per-model tokenizer library
+   * (e.g. tiktoken) with a model-to-encoding mapping, which is heavy and overkill for pre-flight
+   * filtering. The 4:1 ratio is OpenAI's published rule of thumb and works well enough to catch
+   * obvious context overflows. A null-safe fallback returns 0 when there are no messages.
+   */
+  private estimateInputTokens(body: ChatRequest): number {
+    const totalChars = body.messages.reduce((sum, msg) => {
+      let len = typeof msg.content === 'string' ? msg.content.length : 0;
+      if (msg.name) len += msg.name.length;
+      return sum + len;
+    }, 0);
+    return Math.ceil(totalChars / 4);
   }
 
   /** True when any message carries an `image_url` content part (OpenAI vision shape). */

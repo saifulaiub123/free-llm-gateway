@@ -94,6 +94,7 @@ export class CandidateLoader {
         stability: this.stats.stabilityOf(userId, model.id),
         available,
         rateLimitHeadroom: 1,
+        contextWindow: model.contextWindow ?? null,
         capabilities: this.parseCapabilities(model.capabilities),
         position: 0,
       });

@@ -23,6 +23,7 @@ const FAKE_CANDIDATE: RoutingCandidate = {
   available: true,
   rateLimitHeadroom: 1,
   capabilities: { vision: false, tools: true, json: true },
+  contextWindow: 128000,
   position: 1,
 };
 

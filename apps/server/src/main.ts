@@ -32,6 +32,7 @@ async function bootstrap(): Promise<void> {
   const { applyGlobalConfig } = await import('./app.setup.js');
   const { setupSwagger } = await import('./common/swagger/setup-swagger.js');
   const { ConfigService } = await import('@nestjs/config');
+  const { default: express } = await import('express');
 
   const app = await NestFactory.create(AppModule);
   applyGlobalConfig(app);
@@ -42,7 +43,7 @@ async function bootstrap(): Promise<void> {
   // DoS risk (unbounded) and breakage (too small).
   const configService = app.get<InstanceType<typeof ConfigService>>(ConfigService);
   const maxBodySize = configService.get('MAX_BODY_SIZE', '1mb');
-  app.useBodyParser('json', { limit: maxBodySize });
+  app.use(express.json({ limit: maxBodySize }));
 
   setupSwagger(app);
   await app.listen(configService.get('PORT', 3000));
