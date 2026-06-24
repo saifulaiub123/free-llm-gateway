@@ -35,7 +35,7 @@
             </div>
           </td>
           <td class="px-2 py-1.5 text-muted">
-            {model.providerId != null ? (providerById.get(model.providerId)?.displayName ?? '—') : 'Custom'}
+            {model.providerKeyLabel ?? (model.providerId != null ? (providerById.get(model.providerId)?.displayName ?? '—') : 'Custom')}
           </td>
           <td class="px-2 py-1.5">
             <div class="flex flex-wrap gap-1">

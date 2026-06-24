@@ -111,7 +111,8 @@
             : '';
           return (
             model.displayName.toLowerCase().includes(q) ||
-            providerName.toLowerCase().includes(q)
+            providerName.toLowerCase().includes(q) ||
+            (model.providerKeyLabel ?? '').toLowerCase().includes(q)
           );
         })
       : order,
@@ -181,7 +182,9 @@
           {#snippet row(model)}
             <div class="flex flex-wrap items-center gap-2">
               <span class="font-medium">{model.displayName}</span>
-              {#if model.providerId != null}
+              {#if model.providerKeyLabel}
+                <span class="text-xs text-muted">({model.providerKeyLabel})</span>
+              {:else if model.providerId != null}
                 <span class="text-xs text-muted">
                   ({providerById.get(model.providerId)?.displayName ?? 'Unknown'})
                 </span>

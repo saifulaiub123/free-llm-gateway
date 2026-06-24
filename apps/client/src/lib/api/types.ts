@@ -70,6 +70,8 @@ export interface ModelView {
   modelId: string;
   displayName: string;
   providerId: number | null;
+  providerKeyId: number | null;
+  providerKeyLabel: string | null;
   enabled: boolean;
   isCustom: boolean;
   isFree: boolean;

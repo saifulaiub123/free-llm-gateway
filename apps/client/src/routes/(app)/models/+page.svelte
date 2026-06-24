@@ -285,7 +285,7 @@
                   </div>
                 </td>
                 <td class="px-4 py-3 text-muted">
-                  {model.providerId ? providerName(model.providerId) : 'Custom'}
+                  {model.providerKeyLabel ?? (model.providerId ? providerName(model.providerId) : 'Custom')}
                 </td>
                 <td class="px-4 py-3 text-muted tabular-nums">
                   {formatCurrency(model.inputCostPer1m)} / {formatCurrency(model.outputCostPer1m)}
