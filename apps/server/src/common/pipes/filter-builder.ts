@@ -30,6 +30,38 @@ const OP_MAP: Record<FilterOperator, (col: any, val: any) => SQL> = {
  * builder work for both single-table and joined queries.
  */
 export class FilterBuilder {
+  /**
+   * Determines which join-table identifiers (from `FilterColumnConfig.join.table`)
+   * are required by the given filter object.
+   *
+   * WHY a separate method: callers must know *before* calling `build()` whether to
+   * include a `LEFT JOIN` in their query. This method strips operator suffixes from
+   * filter keys (same `lastIndexOf('__')` logic as `build()`) so the join-detection
+   * is correct and lives in one place instead of being duplicated in every repository.
+   *
+   * @param filter  The raw filter object (keys may include `__op` suffixes).
+   * @param config  Per-endpoint `FilterConfig` — the single source of truth.
+   * @returns       Array of unique join-table names (e.g. `['models']`). Empty when
+   *                no join is needed.
+   */
+  static needsJoin(
+    filter: Record<string, unknown> | undefined,
+    config: FilterConfig,
+  ): string[] {
+    if (!filter) return [];
+    const tables = new Set<string>();
+    for (const key of Object.keys(filter)) {
+      // Strip operator suffix: "displayName__like" → "displayName"
+      const sep = key.lastIndexOf('__');
+      const field = sep === -1 ? key : key.slice(0, sep);
+      const colConfig = config[field];
+      if (colConfig?.join) {
+        tables.add(colConfig.join.table);
+      }
+    }
+    return [...tables];
+  }
+
   static build(
     table: TableLike,
     filter: Record<string, unknown> | undefined,

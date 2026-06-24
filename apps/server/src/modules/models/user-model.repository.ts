@@ -20,15 +20,6 @@ export class UserModelRepository extends BaseRepository<typeof userModels> {
   }
 
   /**
-   * Columns on the `models` table that need a LEFT JOIN when referenced in filter/sort.
-   */
-  private static readonly MODELS_JOIN_COLUMNS = [
-    'providerId', 'isFree', 'displayName', 'speedTier',
-    'intelligenceScore', 'inputCostPer1m', 'outputCostPer1m',
-    'contextWindow', 'stabilityBaseline',
-  ];
-
-  /**
    * Paginated, filtered, sorted query of user_models for a given user.
    *
    * Steps:
@@ -53,11 +44,8 @@ export class UserModelRepository extends BaseRepository<typeof userModels> {
     ];
 
     // Determine whether a JOIN with the models table is needed
-    const needsModelsJoin =
-      query.filter != null &&
-      Object.keys(query.filter).some((k) =>
-        UserModelRepository.MODELS_JOIN_COLUMNS.includes(k),
-      );
+    const joinTables = FilterBuilder.needsJoin(query.filter, modelFilterConfig);
+    const needsModelsJoin = joinTables.includes('models');
 
     // Dynamic filter — validated against modelFilterConfig
     if (query.filter) {
