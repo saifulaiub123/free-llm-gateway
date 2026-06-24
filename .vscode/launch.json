@@ -6,14 +6,15 @@
     {
       // NestJS server. Runs the same @swc-node/register loader the `pnpm dev` script uses (tsx/esbuild
       // would drop decorator metadata and break Nest DI). Breakpoints work in apps/server/src/**.
-      // NOTE: no --watch here so breakpoints stay attached; restart the session to pick up changes.
+      // NOTE: --watch + restart:true = Node auto-restarts on file changes and the debugger re-attaches.
       "type": "node",
       "request": "launch",
       "name": "Debug: server",
       "cwd": "${workspaceFolder}/apps/server",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--import", "@swc-node/register/esm-register"],
+      "runtimeArgs": ["--watch", "--import", "@swc-node/register/esm-register"],
       "program": "${workspaceFolder}/apps/server/src/main.ts",
+      "restart": true,
       "envFile": "${workspaceFolder}/.env",
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"]
