@@ -201,7 +201,7 @@ export class ModelsService {
       enabled: true,
       overrides: JSON.stringify(overrides),
     });
-    return this.toCustomView(created);
+    return this.toCustomView(created, new Map());
   }
 
   /** Removes one of the user's custom models; returns whether a matching row was removed. */

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AdapterRegistry } from '@gateway/provider-adapters';
 import { EncryptionService } from '../../common/crypto/encryption.service.js';
 import { ProvidersController } from './providers.controller.js';
@@ -6,6 +6,7 @@ import { ProvidersService } from './providers.service.js';
 import { ProviderRepository } from './provider.repository.js';
 import { UserProviderKeyRepository } from './user-provider-key.repository.js';
 import { ProviderCatalogSeeder } from './provider-catalog.seeder.js';
+import { ModelsModule } from '../models/models.module.js';
 
 /**
  * Provider catalog + per-user key management.
@@ -14,6 +15,7 @@ import { ProviderCatalogSeeder } from './provider-catalog.seeder.js';
  * dependency) and exports the pieces the health probe reuses.
  */
 @Module({
+  imports: [forwardRef(() => ModelsModule)],
   controllers: [ProvidersController],
   providers: [
     ProvidersService,

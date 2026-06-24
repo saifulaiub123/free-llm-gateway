@@ -7,6 +7,24 @@ import type { FallbackExecutor, ExecutionResult } from './fallback-executor.js';
 import type { ModelsService } from '../models/models.service.js';
 import type { RequestLoggingService } from '../analytics/request-logging.service.js';
 import type { CurrentUser } from '../auth/auth.types.js';
+import type { RoutingCandidate } from '../routing/types/routing-candidate.js';
+
+const FAKE_CANDIDATE: RoutingCandidate = {
+  userModelId: 1,
+  modelId: 1,
+  upstreamModelId: 'llama-3.3-70b',
+  providerKey: 'groq',
+  keyId: 1,
+  isFree: true,
+  costPer1m: 0,
+  intelligenceScore: 70,
+  measuredLatencyMs: 500,
+  stability: 0.99,
+  available: true,
+  rateLimitHeadroom: 1,
+  capabilities: { vision: false, tools: true, json: true },
+  position: 1,
+};
 
 const USER: CurrentUser = { id: 7, role: 'user' };
 const BODY = { model: 'auto', messages: [{ role: 'user', content: 'hi' }] } as unknown as ChatRequest;
@@ -36,6 +54,7 @@ describe('GatewayController.chat', () => {
       response: response as never,
       routedVia: 'groq/llama-3.3-70b',
       attempts: 0,
+      winningCandidate: FAKE_CANDIDATE,
     });
 
     await controller.chat(USER, BODY, undefined, res);
@@ -52,6 +71,7 @@ describe('GatewayController.chat', () => {
       response: { id: 'x', usage: { total_tokens: 10 } } as never,
       routedVia: 'groq/llama-3.3-70b',
       attempts: 1,
+      winningCandidate: FAKE_CANDIDATE,
     });
 
     await controller.chat(USER, BODY, undefined, res);
@@ -72,6 +92,7 @@ describe('GatewayController.chat', () => {
       response: { id: 'x' } as never,
       routedVia: 'groq/b',
       attempts: 0,
+      winningCandidate: FAKE_CANDIDATE,
     });
     (controller as unknown as { executor: FallbackExecutor }).executor.execute = vi
       .fn()
@@ -86,6 +107,7 @@ describe('GatewayController.chat', () => {
       response: { id: 'x' } as never,
       routedVia: 'groq/b',
       attempts: 2,
+      winningCandidate: FAKE_CANDIDATE,
     });
 
     await controller.chat(USER, BODY, 'fastest', res);

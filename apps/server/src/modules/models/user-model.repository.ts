@@ -219,4 +219,27 @@ export class UserModelRepository extends BaseRepository<typeof userModels> {
       .returning({ id: userModels.id });
     return rows.length > 0;
   }
+
+  /**
+   * Soft-deletes all non-custom model rows associated with a provider key.
+   *
+   * WHY non-custom only: custom models are user-created and should survive key removal.
+   * If a custom model was explicitly linked to a key, the caller can still reference it
+   * or the FK `ON DELETE SET NULL` will nullify the link.
+   *
+   * Called from ProvidersService.removeKey() to avoid stale key-scoped rows (KSM-009).
+   */
+  async removeByProviderKey(userId: number, providerKeyId: number): Promise<void> {
+    await this.exec()
+      .update(userModels)
+      .set({ isDeleted: true, modifiedAt: new Date() })
+      .where(
+        and(
+          eq(userModels.providerKeyId, providerKeyId),
+          this.scopedToUser(userId),
+          eq(userModels.isCustom, false),
+          eq(userModels.isDeleted, false),
+        ),
+      );
+  }
 }

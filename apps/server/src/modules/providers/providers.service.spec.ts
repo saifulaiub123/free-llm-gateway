@@ -5,6 +5,7 @@ import { ProvidersService } from './providers.service.js';
 import type { EncryptionService } from '../../common/crypto/encryption.service.js';
 import type { ProviderRepository } from './provider.repository.js';
 import type { UserProviderKeyRepository } from './user-provider-key.repository.js';
+import type { UserModelRepository } from '../models/user-model.repository.js';
 
 /** Assembles a ProvidersService with mocked collaborators and exposes the mocks for assertions. */
 function build(options: { valid?: boolean; providerExists?: boolean } = {}) {
@@ -27,11 +28,14 @@ function build(options: { valid?: boolean; providerExists?: boolean } = {}) {
     .fn()
     .mockResolvedValue(options.providerExists === false ? undefined : { id: 7, adapterType: 'groq' });
   const catalog = { getByKey, listAll: vi.fn() } as unknown as ProviderRepository;
+  const removeByProviderKey = vi.fn().mockResolvedValue(undefined);
+  const userModels = { removeByProviderKey } as unknown as UserModelRepository;
   return {
-    service: new ProvidersService(registry, encryption, keys, catalog),
+    service: new ProvidersService(registry, encryption, keys, catalog, userModels),
     encrypt,
     create,
     removeOwned,
+    removeByProviderKey,
   };
 }
 

@@ -7,6 +7,7 @@ import {
   type ProviderKeyMetadata,
 } from './user-provider-key.repository.js';
 import { providers } from '../../database/index.js';
+import { UserModelRepository } from '../models/user-model.repository.js';
 
 /**
  * Provider catalog + per-user key management (TASK-026).
@@ -22,6 +23,7 @@ export class ProvidersService {
     private readonly encryption: EncryptionService,
     private readonly keys: UserProviderKeyRepository,
     private readonly catalog: ProviderRepository,
+    private readonly userModels: UserModelRepository,
   ) {}
 
   /** Returns the global provider catalog. */
@@ -71,8 +73,15 @@ export class ProvidersService {
     return this.keys.listByUser(userId);
   }
 
-  /** Removes (soft-deletes) one of the user's keys; returns whether a matching key was removed. */
+  /**
+   * Removes (soft-deletes) one of the user's keys, along with any non-custom model rows that
+   * were scoped to that key (KSM-009). Returns whether a matching key was removed.
+   */
   async removeKey(userId: number, id: number): Promise<boolean> {
-    return this.keys.removeOwned(userId, id);
+    const removed = await this.keys.removeOwned(userId, id);
+    if (removed) {
+      await this.userModels.removeByProviderKey(userId, id);
+    }
+    return removed;
   }
 }
