@@ -37,6 +37,11 @@ export class CandidateLoader {
   /**
    * @param requestedModel `"auto"` returns all enabled candidates; an explicit model id pins to that
    *   model only.
+   *
+   * KSM-006/KSM-007: when a user_models row has a `providerKeyId`, that specific key is used for
+   * routing instead of picking the first healthy key per provider. This means two keys for the same
+   * provider produce two independent candidates, and a cooldown on one key does not block the other.
+   * Legacy rows with null providerKeyId fall back to `firstHealthyKeyByProvider`.
    */
   async loadForUser(userId: number, requestedModel: string): Promise<RoutingCandidate[]> {
     const userRows = (await this.userModels.listByUser(userId)).filter(
@@ -54,7 +59,12 @@ export class CandidateLoader {
     const providerKeyById = new Map(
       (await this.providers.listAll()).map((provider) => [provider.id, provider.key]),
     );
-    const healthyKeyByProvider = this.firstHealthyKeyByProvider(await this.keys.listByUser(userId));
+
+    // Build key metadata map for per-candidate availability checks (KSM-006).
+    const userKeys = await this.keys.listByUser(userId);
+    const keyById = new Map(userKeys.map((k) => [k.id, k]));
+    // Legacy fallback: first healthy key per provider for rows with no providerKeyId.
+    const healthyKeyByProvider = this.firstHealthyKeyByProvider(userKeys);
 
     const candidates: RoutingCandidate[] = [];
     for (const row of userRows) {
@@ -62,9 +72,13 @@ export class CandidateLoader {
       if (!model || (requestedModel !== 'auto' && model.modelId !== requestedModel)) {
         continue;
       }
-      const keyId = healthyKeyByProvider.get(model.providerId);
+      // Use the row's providerKeyId when set (key-scoped routing), else legacy fallback.
+      const keyId = row.providerKeyId ?? healthyKeyByProvider.get(model.providerId);
+      const key = keyId != null ? keyById.get(keyId) : undefined;
       const available =
-        keyId !== undefined &&
+        keyId != null &&
+        key !== undefined &&
+        key.status === 'healthy' &&
         !this.cooldowns.isInCooldown({ keyId }) &&
         !this.cooldowns.isInCooldown({ modelId: model.id });
       candidates.push({
@@ -87,7 +101,7 @@ export class CandidateLoader {
     return candidates;
   }
 
-  /** Picks the first healthy key per provider id. */
+  /** Picks the first healthy key per provider id. Used as a legacy fallback for rows with no providerKeyId. */
   private firstHealthyKeyByProvider(
     keys: { id: number; providerId: number; status: string }[],
   ): Map<number, number> {
