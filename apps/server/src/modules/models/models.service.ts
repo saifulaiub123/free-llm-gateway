@@ -96,16 +96,34 @@ export class ModelsService {
     );
   }
 
-  /** Returns the user's ENABLED models with their provider key, for the OpenAI `/v1/models` list. */
+  /**
+   * Returns the user's ENABLED models with their provider key, for the OpenAI `/v1/models` list.
+   *
+   * WHY deduplicate (KSM-007): key-scoped routing creates one user_models row per key-provider-model
+   * combination. The `/v1/models` endpoint is an OpenAI-compatible model enumeration and must not
+   * return duplicate entries for the same (providerId, modelId) — external clients expect a unique
+   * list. The first-enabled row's key label is used for `owned_by`.
+   */
   async listEnabled(userId: number): Promise<{ modelId: string; providerKey: string }[]> {
     const enabled = (await this.listForUser(userId)).filter((view) => view.enabled);
     const providerKeyById = new Map(
       (await this.catalog.listAll()).map((provider) => [provider.id, provider.key]),
     );
-    return enabled.map((view) => ({
-      modelId: view.modelId,
-      providerKey: view.providerId !== null ? (providerKeyById.get(view.providerId) ?? 'custom') : 'custom',
-    }));
+    const seen = new Set<string>();
+    const result: { modelId: string; providerKey: string }[] = [];
+    for (const view of enabled) {
+      const key = `${view.providerId ?? 'custom'}:${view.modelId}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      result.push({
+        modelId: view.modelId,
+        providerKey:
+          view.providerId !== null ? (providerKeyById.get(view.providerId) ?? 'custom') : 'custom',
+      });
+    }
+    return result;
   }
 
   /**

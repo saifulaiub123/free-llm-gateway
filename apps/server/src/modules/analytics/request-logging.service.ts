@@ -11,7 +11,9 @@ export interface RequestLogContext {
   eligible: RoutingCandidate[];
   latencyMs: number;
   status: 'success' | 'error';
-  /** `<provider>/<model>` the request was served by (absent on an all-failed request). */
+  /** The candidate that actually served the request (KSM-008 — disambiguates duplicate models). */
+  winningCandidate?: RoutingCandidate;
+  /** `<provider>/<model>` the request was served by (absent on an all-failed request). Legacy field. */
   routedVia?: string;
   fallbackAttempts?: number;
   usage?: ChatResponse['usage'];
@@ -35,7 +37,9 @@ export class RequestLoggingService {
   async record(context: RequestLogContext): Promise<void> {
     try {
       const totalTokens = context.usage?.total_tokens ?? 0;
-      const routed = this.findRouted(context.eligible, context.routedVia);
+      // Use winningCandidate when available (key-scoped routing, KSM-008);
+      // fall back to text-based findRouted for legacy callers.
+      const routed = context.winningCandidate ?? this.findRouted(context.eligible, context.routedVia);
       const actualCost = this.estimateCost(routed?.costPer1m, totalTokens);
       const baselineCost = this.maxEligibleCost(context.eligible, totalTokens);
       const [routedProvider, routedModel] = this.splitRoute(context.routedVia);
@@ -51,6 +55,7 @@ export class RequestLoggingService {
         costEstimate: actualCost,
         costSaved: Math.max(0, baselineCost - actualCost),
         status: context.status,
+        providerKeyId: routed?.keyId ?? null,
       });
     } catch (error) {
       this.logger.warn(`Failed to persist request log: ${String(error)}`);
@@ -73,7 +78,13 @@ export class RequestLoggingService {
     );
   }
 
-  /** The eligible candidate that actually served the request (matched by `<provider>/<model>`). */
+  /**
+   * The eligible candidate that actually served the request (matched by `<provider>/<model>`).
+   *
+   * WHY legacy fallback: key-scoped routing (KSM-006) passes `winningCandidate` directly, so this
+   * text-match method is only hit when old callers send `routedVia` without the candidate object.
+   * With duplicate models from different keys, the first match wins (same behaviour as before).
+   */
   private findRouted(
     eligible: RoutingCandidate[],
     routedVia?: string,

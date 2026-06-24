@@ -14,6 +14,7 @@ import {
   providers,
   models,
   userModels,
+  userProviderKeys,
 } from '../src/database/index.js';
 
 const API_TOKENS_DDL = `CREATE TABLE api_tokens (
@@ -36,6 +37,15 @@ const PROVIDERS_DDL = `CREATE TABLE providers (
   supports_vision INTEGER NOT NULL DEFAULT 0, supports_embeddings INTEGER NOT NULL DEFAULT 0
 )`;
 
+const USER_PROVIDER_KEYS_DDL = `CREATE TABLE user_provider_keys (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  created_by INTEGER, modified_by INTEGER, modified_at INTEGER,
+  is_active INTEGER NOT NULL DEFAULT 1, is_deleted INTEGER NOT NULL DEFAULT 0,
+  user_id INTEGER NOT NULL, provider_id INTEGER NOT NULL, encrypted_key TEXT NOT NULL,
+  label TEXT, status TEXT NOT NULL DEFAULT 'healthy', last_checked_at INTEGER
+)`;
+
 const MODELS_DDL = `CREATE TABLE models (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
@@ -51,7 +61,7 @@ const USER_MODELS_DDL = `CREATE TABLE user_models (
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   created_by INTEGER, modified_by INTEGER, modified_at INTEGER,
   is_active INTEGER NOT NULL DEFAULT 1, is_deleted INTEGER NOT NULL DEFAULT 0,
-  user_id INTEGER NOT NULL, model_id INTEGER, custom_provider_id INTEGER,
+  user_id INTEGER NOT NULL, provider_key_id INTEGER, model_id INTEGER, custom_provider_id INTEGER,
   enabled INTEGER NOT NULL DEFAULT 1, is_custom INTEGER NOT NULL DEFAULT 0, overrides TEXT
 )`;
 
@@ -80,7 +90,7 @@ describe('Gateway /v1 (e2e)', () => {
     applyGlobalConfig(app);
     await app.init();
     const db = app.get(DatabaseService).db;
-    for (const ddl of [API_TOKENS_DDL, PROVIDERS_DDL, MODELS_DDL, USER_MODELS_DDL]) {
+    for (const ddl of [API_TOKENS_DDL, PROVIDERS_DDL, USER_PROVIDER_KEYS_DDL, MODELS_DDL, USER_MODELS_DDL]) {
       await db.run(sql.raw(ddl));
     }
     await db.insert(apiTokens).values({ userId: 1, tokenHash: TOKEN_HASH, name: 'e2e', prefix: 'sqr-llm-gate' });
@@ -90,6 +100,7 @@ describe('Gateway /v1 (e2e)', () => {
         .values({ key: 'groq', displayName: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', adapterType: 'groq' })
         .returning()
     )[0]!;
+    await db.insert(userProviderKeys).values({ userId: 1, providerId: provider.id, encryptedKey: 'dummy', label: 'main', status: 'healthy' });
     const enabledModel = (
       await db
         .insert(models)

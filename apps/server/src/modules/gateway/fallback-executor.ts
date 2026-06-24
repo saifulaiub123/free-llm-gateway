@@ -18,6 +18,8 @@ export interface ExecutionResult {
   response: ChatResponse;
   routedVia: string;
   attempts: number;
+  /** The candidate that actually served the request (KSM-008 — used for disambiguated logging). */
+  winningCandidate: RoutingCandidate;
 }
 
 /** A live upstream SSE stream plus its routing telemetry. */
@@ -25,6 +27,8 @@ export interface StreamResult {
   stream: AsyncIterable<ChatChunk>;
   routedVia: string;
   attempts: number;
+  /** The candidate that actually served the request (KSM-008 — used for disambiguated logging). */
+  winningCandidate: RoutingCandidate;
 }
 
 /** Maximum upstream attempts before giving up (REQ-014). */
@@ -93,12 +97,13 @@ export class FallbackExecutor {
           response,
           routedVia: `${candidate.providerKey}/${candidate.upstreamModelId}`,
           attempts: attempts - 1, // number of fallbacks before this success
+          winningCandidate: candidate,
         };
       } catch (error) {
         lastError = error as Error;
         this.stats.recordOutcome(userId, candidate.modelId, false, Date.now() - startedAt);
         if (!this.isRetryable(error)) {
-          //throw error; // e.g. 400 bad request — surface immediately, no fallback
+          throw error; // e.g. 400 bad request — surface immediately, no fallback (sync path)
         }
         // 429 / 5xx / timeout — cool the key down and try the next candidate.
         this.cooldown.placeOnCooldown({ keyId: candidate.keyId }, BASE_COOLDOWN_MS, this.reasonOf(error));
@@ -157,6 +162,7 @@ export class FallbackExecutor {
           stream: this.continueStream(first, iterator),
           routedVia: `${candidate.providerKey}/${candidate.upstreamModelId}`,
           attempts: attempts - 1,
+          winningCandidate: candidate,
         };
       } catch (error) {
         lastError = error as Error;

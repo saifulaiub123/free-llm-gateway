@@ -7,13 +7,14 @@ import { sql } from 'drizzle-orm';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { applyGlobalConfig } from '../src/app.setup.js';
-import { DatabaseService, requestLogs } from '../src/database/index.js';
+import { DatabaseService, requestLogs, models } from '../src/database/index.js';
 
 const REQUEST_LOGS_DDL = `CREATE TABLE request_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   user_id INTEGER NOT NULL,
   strategy_id INTEGER,
+  provider_key_id INTEGER,
   requested_model TEXT NOT NULL,
   routed_provider TEXT, routed_model TEXT,
   fallback_attempts INTEGER NOT NULL DEFAULT 0,
@@ -23,6 +24,16 @@ const REQUEST_LOGS_DDL = `CREATE TABLE request_logs (
   cost_estimate REAL NOT NULL DEFAULT 0,
   cost_saved REAL NOT NULL DEFAULT 0,
   status TEXT NOT NULL
+)`;
+
+const MODELS_DDL = `CREATE TABLE models (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  provider_id INTEGER NOT NULL, model_id TEXT NOT NULL, display_name TEXT NOT NULL,
+  is_free INTEGER NOT NULL DEFAULT 0, intelligence_score REAL NOT NULL DEFAULT 0,
+  speed_tier TEXT NOT NULL DEFAULT 'medium', input_cost_per_1m REAL NOT NULL DEFAULT 0,
+  output_cost_per_1m REAL NOT NULL DEFAULT 0, context_window INTEGER,
+  capabilities TEXT NOT NULL, stability_baseline REAL NOT NULL DEFAULT 0.9
 )`;
 
 /**
@@ -42,7 +53,9 @@ describe('Analytics (e2e)', () => {
     applyGlobalConfig(app);
     await app.init();
     const db = app.get(DatabaseService).db;
-    await db.run(sql.raw(REQUEST_LOGS_DDL));
+    for (const ddl of [REQUEST_LOGS_DDL, MODELS_DDL]) {
+      await db.run(sql.raw(ddl));
+    }
     await db.insert(requestLogs).values([
       { userId: 1, requestedModel: 'auto', routedProvider: 'groq', status: 'success', latencyMs: 100, inputTokens: 10, outputTokens: 20, costSaved: 0.5 },
       { userId: 1, requestedModel: 'auto', status: 'error', latencyMs: 200 },

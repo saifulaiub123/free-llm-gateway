@@ -1,0 +1,1 @@
+ALTER TABLE `request_logs` ADD `provider_key_id` integer;

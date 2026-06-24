@@ -4,7 +4,7 @@ import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { userModels } from '../index.js';
 
-// DDL mirroring migrations/sqlite/0004_* so the in-memory db has the user_models table.
+// DDL mirroring migrations/sqlite/0011_* so the in-memory db has the user_models table with providerKeyId.
 const USER_MODELS_DDL = `CREATE TABLE user_models (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
@@ -14,6 +14,7 @@ const USER_MODELS_DDL = `CREATE TABLE user_models (
   is_active INTEGER NOT NULL DEFAULT 1,
   is_deleted INTEGER NOT NULL DEFAULT 0,
   user_id INTEGER NOT NULL,
+  provider_key_id INTEGER,
   model_id INTEGER,
   custom_provider_id INTEGER,
   enabled INTEGER NOT NULL DEFAULT 1,

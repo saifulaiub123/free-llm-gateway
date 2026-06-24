@@ -8,10 +8,11 @@ const { table, columnKit, index } = getActiveProvider();
  * metric (the product's value proof).
  *
  * WHY only `baseColumns`, no FKs: this is a high-volume, append-only audit ledger pruned by a
- * retention job (not soft-deleted), so it stays lean — `user_id`/`strategy_id` are stored as plain
- * ids (the parent rows may be deleted while their historical logs remain) and the hot `(user_id,
- * created_at)` lookup is served by a composite index. `routed_provider`/`routed_model` are nullable
- * because an all-failed request never routes anywhere.
+ * retention job (not soft-deleted), so it stays lean — `user_id`/`strategy_id`/`provider_key_id`
+ * are stored as plain ids (the parent rows may be deleted while their historical logs remain) and
+ * the hot `(user_id, created_at)` lookup is served by a composite index. `routed_provider`/`routed_model`
+ * are nullable because an all-failed request never routes anywhere. `provider_key_id` enables account-level
+ * analytics without a separate join table (KSM-008).
  */
 export const requestLogs = table(
   'request_logs',
@@ -19,6 +20,7 @@ export const requestLogs = table(
     ...baseColumns,
     userId: columnKit.integer('user_id').notNull(),
     strategyId: columnKit.integer('strategy_id'),
+    providerKeyId: columnKit.integer('provider_key_id'),
     requestedModel: columnKit.text('requested_model').notNull(),
     routedProvider: columnKit.text('routed_provider'),
     routedModel: columnKit.text('routed_model'),

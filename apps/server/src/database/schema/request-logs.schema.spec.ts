@@ -8,6 +8,7 @@ const DDL = `CREATE TABLE request_logs (
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   user_id INTEGER NOT NULL,
   strategy_id INTEGER,
+  provider_key_id INTEGER,
   requested_model TEXT NOT NULL,
   routed_provider TEXT,
   routed_model TEXT,

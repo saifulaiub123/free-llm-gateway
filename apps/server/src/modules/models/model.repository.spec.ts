@@ -27,6 +27,7 @@ const USER_MODELS_DDL = sql`CREATE TABLE user_models (
   created_by INTEGER, modified_by INTEGER, modified_at INTEGER,
   is_active INTEGER NOT NULL DEFAULT 1, is_deleted INTEGER NOT NULL DEFAULT 0,
   user_id INTEGER NOT NULL,
+  provider_key_id INTEGER,
   model_id INTEGER,
   custom_provider_id INTEGER,
   enabled INTEGER NOT NULL DEFAULT 1,

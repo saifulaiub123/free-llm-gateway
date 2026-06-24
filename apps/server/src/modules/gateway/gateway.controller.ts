@@ -85,6 +85,7 @@ export class GatewayController {
         eligible: chain,
         latencyMs: Date.now() - startedAt,
         status: 'success',
+        winningCandidate: result.winningCandidate,
         routedVia: result.routedVia,
         fallbackAttempts: result.attempts,
         usage: result.response.usage,
@@ -120,7 +121,7 @@ export class GatewayController {
     res: Response,
     startedAt: number,
   ): Promise<void> {
-    const { stream, routedVia, attempts } = await this.executor.openStream(userId, chain, body);
+    const { stream, routedVia, attempts, winningCandidate } = await this.executor.openStream(userId, chain, body);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -141,6 +142,7 @@ export class GatewayController {
       eligible: chain,
       latencyMs: Date.now() - startedAt,
       status: 'success',
+      winningCandidate,
       routedVia,
       fallbackAttempts: attempts,
     });

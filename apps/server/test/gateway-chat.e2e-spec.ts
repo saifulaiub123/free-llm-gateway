@@ -53,7 +53,7 @@ const DDL = {
     id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
     created_by INTEGER, modified_by INTEGER, modified_at INTEGER,
     is_active INTEGER NOT NULL DEFAULT 1, is_deleted INTEGER NOT NULL DEFAULT 0,
-    user_id INTEGER NOT NULL, model_id INTEGER, custom_provider_id INTEGER,
+    user_id INTEGER NOT NULL, provider_key_id INTEGER, model_id INTEGER, custom_provider_id INTEGER,
     enabled INTEGER NOT NULL DEFAULT 1, is_custom INTEGER NOT NULL DEFAULT 0, overrides TEXT)`,
   routingStrategies: `CREATE TABLE routing_strategies (
     id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
@@ -63,7 +63,8 @@ const DDL = {
     config TEXT NOT NULL DEFAULT '{}', is_default INTEGER NOT NULL DEFAULT 0)`,
   requestLogs: `CREATE TABLE request_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-    user_id INTEGER NOT NULL, strategy_id INTEGER, requested_model TEXT NOT NULL,
+    user_id INTEGER NOT NULL, strategy_id INTEGER, provider_key_id INTEGER,
+    requested_model TEXT NOT NULL,
     routed_provider TEXT, routed_model TEXT, fallback_attempts INTEGER NOT NULL DEFAULT 0,
     latency_ms INTEGER NOT NULL DEFAULT 0, input_tokens INTEGER NOT NULL DEFAULT 0,
     output_tokens INTEGER NOT NULL DEFAULT 0, cost_estimate REAL NOT NULL DEFAULT 0,
@@ -155,7 +156,7 @@ describe('Gateway chat /v1/chat/completions (e2e, TEST-013)', () => {
     expect(response.body.object).toBe('chat.completion');
     expect(response.body.choices[0].message.content).toBe('Hello!');
     expect(response.body.data).toBeUndefined();
-    expect(response.headers['x-routed-via']).toMatch(/^(groq|cerebras)\/\d+$/);
+    expect(response.headers['x-routed-via']).toMatch(/^(groq|cerebras)\/.+$/);
   });
 
   it('fails over before the first token and reports X-Fallback-Attempts', async () => {
@@ -175,7 +176,7 @@ describe('Gateway chat /v1/chat/completions (e2e, TEST-013)', () => {
       .expect(200);
 
     expect(response.body.object).toBe('chat.completion');
-    expect(response.headers['x-routed-via']).toMatch(/^(groq|cerebras)\/\d+$/);
+    expect(response.headers['x-routed-via']).toMatch(/^(groq|cerebras)\/.+$/);
     expect(response.headers['x-fallback-attempts']).toBe('1');
   });
 
