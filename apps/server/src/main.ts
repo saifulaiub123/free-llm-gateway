@@ -20,7 +20,11 @@ async function bootstrap(): Promise<void> {
   const envPath: string[] = [];
   if (existsSync('.env')) envPath.push('.env');
   if (existsSync('../../.env')) envPath.push('../../.env');
-  config({ path: envPath.length > 0 ? envPath : undefined });
+  if (envPath.length > 0) {
+    config({ path: envPath });
+  } else {
+    config();
+  }
 
   // Dynamic imports — these execute AFTER dotenv.config() so env vars are available
   const { NestFactory } = await import('@nestjs/core');
@@ -32,8 +36,8 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   applyGlobalConfig(app);
   setupSwagger(app);
-  const configService = app.get<ConfigService>(ConfigService);
-  await app.listen(configService.get('PORT'));
+  const configService = app.get<InstanceType<typeof ConfigService>>(ConfigService);
+  await app.listen(configService.get('PORT', 3000));
 }
 
 void bootstrap();
