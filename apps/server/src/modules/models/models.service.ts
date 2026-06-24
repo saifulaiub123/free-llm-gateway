@@ -72,7 +72,7 @@ export class ModelsService {
     );
     const merged = this.metadata.applyBaseline(key.providerId, discovered);
     const saved = await this.models.upsertMany(key.providerId, merged);
-    await this.userModels.ensureRows(userId, saved);
+    await this.userModels.ensureRows(userId, saved, key.id);
     return { fetched: saved.length, free: saved.filter((model) => model.isFree).length };
   }
 

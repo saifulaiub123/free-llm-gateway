@@ -115,13 +115,18 @@ export class UserModelRepository extends BaseRepository<typeof userModels> {
    * Ensures a `user_models` row exists for each freshly-saved catalog model, enabling free models by
    * default (the free-first promise). Existing rows are left untouched, so a re-fetch never clobbers
    * a user's manual enable/disable choices.
+   *
+   * @param providerKeyId - The stored key that discovered these models (KSM-001). Null for legacy
+   *   or unkeyed flows. When set, the existence check scopes by `(userId, providerKeyId, modelId)`
+   *   so multiple keys for the same provider each get their own user_models row.
    */
-  async ensureRows(userId: number, savedModels: SavedModel[]): Promise<void> {
+  async ensureRows(userId: number, savedModels: SavedModel[], providerKeyId?: number | null): Promise<void> {
     for (const model of savedModels) {
-      if (!(await this.hasRowForModel(userId, model.id))) {
+      if (!(await this.hasRowForModel(userId, model.id, providerKeyId ?? null))) {
         await this.exec().insert(userModels).values({
           userId,
           modelId: model.id,
+          providerKeyId: providerKeyId ?? null,
           enabled: model.isFree, // free-by-default
           isCustom: false,
         });
@@ -129,18 +134,26 @@ export class UserModelRepository extends BaseRepository<typeof userModels> {
     }
   }
 
-  /** Whether the user already has a (non-deleted) row for a catalog model. */
-  private async hasRowForModel(userId: number, modelId: number): Promise<boolean> {
+  /**
+   * Whether the user already has a (non-deleted) row for a catalog model.
+   *
+   * When `providerKeyId` is non-null, the check is key-scoped so the same upstream model can
+   * have a separate row per provider key/account. When null, it falls back to the legacy
+   * scoping `(userId, modelId)` for backward compatibility.
+   */
+  private async hasRowForModel(userId: number, modelId: number, providerKeyId: number | null): Promise<boolean> {
+    const conditions = [
+      this.scopedToUser(userId),
+      eq(userModels.modelId, modelId),
+      eq(userModels.isDeleted, false),
+    ];
+    if (providerKeyId !== null) {
+      conditions.push(eq(userModels.providerKeyId, providerKeyId));
+    }
     const rows = await this.exec()
       .select({ id: userModels.id })
       .from(userModels)
-      .where(
-        and(
-          this.scopedToUser(userId),
-          eq(userModels.modelId, modelId),
-          eq(userModels.isDeleted, false),
-        ),
-      )
+      .where(and(...conditions))
       .limit(1);
     return rows.length > 0;
   }

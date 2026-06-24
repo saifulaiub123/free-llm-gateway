@@ -90,7 +90,7 @@ describe('ModelsService.fetchModelsForKey', () => {
       3,
       expect.arrayContaining([expect.objectContaining({ modelId: 'a', intelligenceScore: 50 })]),
     );
-    expect(ensureRows).toHaveBeenCalledWith(5, expect.any(Array));
+    expect(ensureRows).toHaveBeenCalledWith(5, expect.any(Array), 9); // 9 = key.id
     expect(result).toEqual({ fetched: 3, free: 2 });
   });
 
