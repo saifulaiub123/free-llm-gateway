@@ -24,6 +24,10 @@ export class UserModelDto {
   @ApiProperty({ example: 'llama-3.3-70b' }) modelId!: string;
   @ApiProperty() displayName!: string;
   @ApiProperty({ type: Number, nullable: true }) providerId!: number | null;
+  @ApiProperty({ type: Number, nullable: true, description: 'The stored provider key that discovered this model (KSM-003).' })
+  providerKeyId!: number | null;
+  @ApiProperty({ type: String, nullable: true, description: 'Label of the provider key, e.g. "personal" or "work" (KSM-005).' })
+  providerKeyLabel!: string | null;
   @ApiProperty() enabled!: boolean;
   @ApiProperty() isCustom!: boolean;
   @ApiProperty() isFree!: boolean;

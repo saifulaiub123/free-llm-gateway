@@ -22,6 +22,10 @@ export interface ModelView {
   modelId: string;
   displayName: string;
   providerId: number | null;
+  /** The stored provider key that discovered this model (KSM-003). Null for legacy/custom rows. */
+  providerKeyId: number | null;
+  /** The label of the provider key, e.g. "personal" or "work" (KSM-005). Null when unkeyed. */
+  providerKeyLabel: string | null;
   enabled: boolean;
   isCustom: boolean;
   isFree: boolean;
@@ -84,8 +88,11 @@ export class ModelsService {
       .map((row) => row.modelId as number);
     const catalog = await this.models.findByIds(catalogIds);
     const byId = new Map(catalog.map((model) => [model.id, model]));
+    const keyLabelById = await this.buildKeyLabelMap(userId);
     return rows.map((row) =>
-      row.isCustom ? this.toCustomView(row) : this.toCatalogView(row, byId.get(row.modelId as number)),
+      row.isCustom
+        ? this.toCustomView(row, keyLabelById)
+        : this.toCatalogView(row, byId.get(row.modelId as number), keyLabelById),
     );
   }
 
@@ -117,11 +124,12 @@ export class ModelsService {
     const catalog =
       catalogIds.length > 0 ? await this.models.findByIds(catalogIds) : [];
     const byId = new Map(catalog.map((m) => [m.id, m]));
+    const keyLabelById = await this.buildKeyLabelMap(userId);
     return {
       items: page.items.map((row) =>
         row.isCustom
-          ? this.toCustomView(row)
-          : this.toCatalogView(row, byId.get(row.modelId as number)),
+          ? this.toCustomView(row, keyLabelById)
+          : this.toCatalogView(row, byId.get(row.modelId as number), keyLabelById),
       ),
       page: page.page,
       perPage: page.perPage,
@@ -183,10 +191,17 @@ export class ModelsService {
     return this.userModels.removeCustomOwned(userId, id);
   }
 
+  /** Builds a map of keyId → label for the user's provider keys (KSM-003). */
+  private async buildKeyLabelMap(userId: number): Promise<Map<number, string>> {
+    const keys = await this.keys.listByUser(userId);
+    return new Map(keys.map((k) => [k.id, k.label ?? `key ${k.id}`]));
+  }
+
   /** Builds the view for a catalog-backed user model (applies any cost/capability overrides). */
   private toCatalogView(
     row: typeof userModelsTable.$inferSelect,
     model: typeof modelsTable.$inferSelect | undefined,
+    keyLabelById: Map<number, string>,
   ): ModelView {
     if (!model) {
       // Defensive fallback: the user_models row references a catalog model that no longer exists.
@@ -195,6 +210,8 @@ export class ModelsService {
         modelId: 'unknown',
         displayName: 'unknown',
         providerId: null,
+        providerKeyId: row.providerKeyId,
+        providerKeyLabel: row.providerKeyId != null ? (keyLabelById.get(row.providerKeyId) ?? null) : null,
         enabled: row.enabled,
         isCustom: false,
         isFree: false,
@@ -215,6 +232,8 @@ export class ModelsService {
       modelId: model.modelId,
       displayName: model.displayName,
       providerId: model.providerId,
+      providerKeyId: row.providerKeyId,
+      providerKeyLabel: row.providerKeyId != null ? (keyLabelById.get(row.providerKeyId) ?? null) : null,
       enabled: row.enabled,
       isCustom: false,
       isFree: model.isFree,
@@ -228,13 +247,18 @@ export class ModelsService {
   }
 
   /** Builds the view for a fully-custom user model (details live in `overrides`). */
-  private toCustomView(row: typeof userModelsTable.$inferSelect): ModelView {
+  private toCustomView(
+    row: typeof userModelsTable.$inferSelect,
+    keyLabelById: Map<number, string>,
+  ): ModelView {
     const overrides = this.parseOverrides(row.overrides);
     return {
       userModelId: row.id,
       modelId: (overrides.modelId as string) ?? 'custom',
       displayName: (overrides.displayName as string) ?? 'Custom model',
       providerId: row.customProviderId,
+      providerKeyId: row.providerKeyId,
+      providerKeyLabel: row.providerKeyId != null ? (keyLabelById.get(row.providerKeyId) ?? null) : null,
       enabled: row.enabled,
       isCustom: true,
       isFree: true,

@@ -26,6 +26,7 @@ export const modelFilterConfig: FilterConfig = {
   enabled: { operators: ['eq'] },
   isCustom: { operators: ['eq'] },
   customProviderId: { operators: ['eq'] },
+  providerKeyId: { operators: ['eq'] },
 
   // models table columns (require LEFT JOIN)
   providerId: { operators: ['eq'], join: { table: 'models', column: 'providerId' } },
