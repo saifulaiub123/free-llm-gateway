@@ -11,6 +11,7 @@
     "test": "vitest run",
     "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "tsx --env-file-if-exists=.env src/database/migrate.ts",
+    "db:backfill-keys": "tsx --env-file-if-exists=.env scripts/backfill-user-model-keys.ts",
     "verify:postgres": "tsx scripts/verify-postgres.ts",
     "smoke": "tsx scripts/smoke-test.ts"
   },
