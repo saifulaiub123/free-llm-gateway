@@ -19,6 +19,20 @@ function decodePrincipal(accessToken: string): Principal | null {
   }
 }
 
+/** Returns true when the JWT's `exp` claim (epoch seconds) is in the past (with leeway). */
+function isTokenExpired(accessToken: string, leewaySeconds = 10): boolean {
+  try {
+    const payload = accessToken.split('.')[1];
+    if (!payload) return true;
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const claims = JSON.parse(json) as { exp?: number };
+    if (typeof claims.exp !== 'number') return false; // no exp → treat as non-expiring
+    return Date.now() >= (claims.exp - leewaySeconds) * 1000;
+  } catch {
+    return true;
+  }
+}
+
 /**
  * Reactive auth state (Svelte 5 runes).
  *
@@ -44,6 +58,11 @@ class AuthStore {
     const refresh = localStorage.getItem(REFRESH_KEY);
     if (access && refresh) {
       this.apply({ accessToken: access, refreshToken: refresh });
+      // If the restored access token is already expired, silently refresh in the background
+      // so the first API call doesn't need a 401 round-trip.
+      if (isTokenExpired(access)) {
+        this.tryRefresh();
+      }
     }
   }
 
@@ -70,9 +89,31 @@ class AuthStore {
     }
   }
 
-  /** Attempts a single token refresh; returns whether a new access token was obtained. */
+  /** Tracks the in-flight refresh so concurrent 401 retries share one request. */
+  private refreshPromise: Promise<boolean> | null = null;
+
+  /**
+   * Attempts a token refresh with mutual exclusion.
+   *
+   * WHY shared-promise guard: when the access token expires, several concurrent API calls all hit 401
+   * at the same time and each calls tryRefresh(). Without this guard they'd each try to rotate the
+   * refresh token independently — the first succeeds, the rest hit server-side "reuse detection"
+   * (the old refresh token was already revoked) and call clear(), which logs the user out.
+   */
   async tryRefresh(): Promise<boolean> {
     if (!this.refreshToken) return false;
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = this.executeRefresh();
+    try {
+      return await this.refreshPromise;
+    } finally {
+      this.refreshPromise = null;
+    }
+  }
+
+  /** Performs the actual POST to `/auth/refresh`. */
+  private async executeRefresh(): Promise<boolean> {
     try {
       const response = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
