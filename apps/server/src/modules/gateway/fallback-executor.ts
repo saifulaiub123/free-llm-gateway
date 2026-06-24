@@ -102,9 +102,9 @@ export class FallbackExecutor {
       } catch (error) {
         lastError = error as Error;
         this.stats.recordOutcome(userId, candidate.modelId, false, Date.now() - startedAt);
-        if (!this.isRetryable(error)) {
-          throw error; // e.g. 400 bad request — surface immediately, no fallback (sync path)
-        }
+        // if (!this.isRetryable(error)) {
+        //   throw error; // e.g. 400 bad request — surface immediately, no fallback (sync path)
+        // }
         // 429 / 5xx / timeout — cool the key down and try the next candidate.
         this.cooldown.placeOnCooldown({ keyId: candidate.keyId }, BASE_COOLDOWN_MS, this.reasonOf(error));
       }

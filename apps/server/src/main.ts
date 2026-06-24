@@ -35,8 +35,16 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create(AppModule);
   applyGlobalConfig(app);
-  setupSwagger(app);
+
+  // Read MAX_BODY_SIZE from config (default 1mb) and apply it to the JSON body parser.
+  // WHY: chat-completion payloads can be large (hundreds of KB). The Express default of
+  // 100 KB causes PayloadTooLargeError. Making it configurable per deployment avoids both
+  // DoS risk (unbounded) and breakage (too small).
   const configService = app.get<InstanceType<typeof ConfigService>>(ConfigService);
+  const maxBodySize = configService.get('MAX_BODY_SIZE', '1mb');
+  app.useBodyParser('json', { limit: maxBodySize });
+
+  setupSwagger(app);
   await app.listen(configService.get('PORT', 3000));
 }
 
