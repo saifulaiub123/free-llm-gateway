@@ -5,7 +5,7 @@
  * called by external LLM clients, never by this dashboard. Override via `VITE_API_BASE` per
  * environment; the default matches the server's configured dev `PORT`.
  */
-export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5001/api/v1';
+export const API_BASE = import.meta.env.VITE_API_BASE ?? '/api/v1';
 
 /**
  * Base URL of the OpenAI-compatible gateway (`/v1`), derived from {@link API_BASE} by swapping the

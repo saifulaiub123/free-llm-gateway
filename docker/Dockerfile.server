@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1
+# Builds and runs the NestJS API server only (no client SPA).
+# Use with Dockerfile.client + nginx for a separate-client deployment.
+
+ARG NODE_VERSION=22.15.0
+
+# --- Base: Node + pnpm via Corepack -----------------------------------------
+FROM node:${NODE_VERSION}-bookworm-slim AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable
+WORKDIR /app
+
+# --- Dependencies -----------------------------------------------------------
+FROM base AS deps
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/* \
+  && npm install -g node-gyp-build
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY apps/server/package.json ./apps/server/package.json
+COPY packages/shared-types/package.json ./packages/shared-types/package.json
+COPY packages/provider-adapters/package.json ./packages/provider-adapters/package.json
+RUN pnpm install --frozen-lockfile
+
+# --- Build: copy all source (no client build needed) ------------------------
+FROM deps AS build
+COPY . .
+
+# --- Runtime ----------------------------------------------------------------
+FROM base AS runtime
+ENV NODE_ENV=production
+# StaticModule will not register the SPA serve-static because the client build
+# path does not exist — it gracefully becomes a no-op (existsSync check).
+COPY --from=build /app ./
+EXPOSE 5001
+WORKDIR /app/apps/server
+# Run pending Drizzle migrations at container startup, then boot the server.
+CMD ["pnpm", "start:migrate"]
