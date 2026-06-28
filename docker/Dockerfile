@@ -40,6 +40,10 @@ COPY --from=build /app ./
 VOLUME ["/app/apps/server/data"]
 EXPOSE 5001
 WORKDIR /app/apps/server
-# The server runs via @swc-node/register (TypeScript + emitDecoratorMetadata for NestJS DI +
-# workspace resolution). tsx/esbuild is NOT used at runtime — it drops decorator metadata.
-CMD ["pnpm", "start"]
+# Run pending Drizzle migrations at container startup, then boot the server.
+# WHY auto-migrate: in container orchestration (Dokploy, Docker Compose, K8s) the DB schema
+# must be up-to-date before the first request arrives, and a separate migration step is easy
+# to forget. The server runs via @swc-node/register (TypeScript + emitDecoratorMetadata for
+# NestJS DI + workspace resolution). tsx/esbuild is NOT used at runtime — it drops decorator
+# metadata.
+CMD ["pnpm", "start:migrate"]
