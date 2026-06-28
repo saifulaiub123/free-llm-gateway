@@ -18,6 +18,7 @@ services:
       DB_URL: ${DB_URL:-file:./data/llm-gateway.db}
       DB_SCHEMA: ${DB_SCHEMA:-public}
       DB_TABLE_PREFIX: ${DB_TABLE_PREFIX:-}
+      LOG_LEVEL: ${LOG_LEVEL:-error}
       MAX_FALLBACK_ATTEMPTS: ${MAX_FALLBACK_ATTEMPTS:-20}
     volumes:
       # Persist the SQLite database across container restarts.

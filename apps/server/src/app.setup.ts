@@ -20,5 +20,7 @@ export function applyGlobalConfig(app: INestApplication): void {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
-  app.enableCors();
+  app.enableCors({
+    origin: ['https://llm.scraperq.com', 'http://localhost:5173'],
+  });
 }

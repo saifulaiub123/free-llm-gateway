@@ -14,6 +14,7 @@ import { AdminModule } from './modules/admin/admin.module.js';
 import { AnalyticsModule } from './modules/analytics/analytics.module.js';
 import { GatewayModule } from './modules/gateway/gateway.module.js';
 import { TokensModule } from './modules/tokens/tokens.module.js';
+import { PinoLoggerModule } from './common/logger/logger.module.js';
 import { StaticModule } from './static/static.module.js';
 
 /**
@@ -33,6 +34,7 @@ import { StaticModule } from './static/static.module.js';
       validate: validateEnv,
     }),
     ScheduleModule.forRoot(),
+    PinoLoggerModule,
     DatabaseModule,
     StaticModule.register(),
     AuthModule,
