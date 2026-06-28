@@ -23,25 +23,25 @@ CREATE TABLE IF NOT EXISTS "strategy_model_order" (
 );
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "routing_strategies" ADD CONSTRAINT "routing_strategies_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ ALTER TABLE "routing_strategies" ADD CONSTRAINT "routing_strategies_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "routing_strategies" ADD CONSTRAINT "routing_strategies_created_by_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ ALTER TABLE "routing_strategies" ADD CONSTRAINT "routing_strategies_created_by_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "routing_strategies" ADD CONSTRAINT "routing_strategies_modified_by_fk" FOREIGN KEY ("modified_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+ ALTER TABLE "routing_strategies" ADD CONSTRAINT "routing_strategies_modified_by_fk" FOREIGN KEY ("modified_by") REFERENCES "users"("id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "strategy_model_order" ADD CONSTRAINT "strategy_model_order_strategy_id_routing_strategies_id_fk" FOREIGN KEY ("strategy_id") REFERENCES "public"."routing_strategies"("id") ON DELETE cascade ON UPDATE no action;
+ ALTER TABLE "strategy_model_order" ADD CONSTRAINT "strategy_model_order_strategy_id_routing_strategies_id_fk" FOREIGN KEY ("strategy_id") REFERENCES "routing_strategies"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
