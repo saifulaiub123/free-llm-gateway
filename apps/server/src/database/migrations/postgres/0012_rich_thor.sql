@@ -1,1 +1,0 @@
-ALTER TABLE "request_logs" ADD COLUMN "provider_key_id" integer;

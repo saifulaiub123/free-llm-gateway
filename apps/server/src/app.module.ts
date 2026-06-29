@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { validateEnv } from './config/env.schema.js';
@@ -16,6 +17,8 @@ import { GatewayModule } from './modules/gateway/gateway.module.js';
 import { TokensModule } from './modules/tokens/tokens.module.js';
 import { PinoLoggerModule } from './common/logger/logger.module.js';
 import { StaticModule } from './static/static.module.js';
+import { AppLogModule } from './modules/app-log/app-log.module.js';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 
 /**
  * Root application module.
@@ -48,6 +51,10 @@ import { StaticModule } from './static/static.module.js';
     AnalyticsModule,
     GatewayModule,
     HealthModule,
+    AppLogModule,
+  ],
+  providers: [
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })
 export class AppModule {}

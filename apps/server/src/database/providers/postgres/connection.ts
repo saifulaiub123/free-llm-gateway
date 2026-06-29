@@ -6,6 +6,9 @@ import { createPostgresPool } from './paths.js';
  * Opens a PostgreSQL-backed connection from `DB_URL` (or `PG*` env vars). `schema` is passed in by the
  * common connection factory so this module never imports the schema barrel (avoids a cycle). The pool
  * pins `search_path` to `DB_SCHEMA` on every connection. Returns a `disconnect` that ends the pool.
+ *
+ * The configured schema (`DB_SCHEMA`) is auto-created on the first pool connection, so the server
+ * can boot without a manual `CREATE SCHEMA` step (the pool `connect` handler runs it idempotently).
  */
 export const connectPostgres = (schema: Schema): DbConnection => {
   const pool = createPostgresPool();
