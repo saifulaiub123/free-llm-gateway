@@ -1,3 +1,20 @@
+CREATE TABLE IF NOT EXISTS "free_llm"."api_tokens" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_by" integer,
+	"modified_by" integer,
+	"modified_at" timestamp with time zone,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"is_deleted" boolean DEFAULT false NOT NULL,
+	"user_id" integer NOT NULL,
+	"token_hash" text NOT NULL,
+	"name" text NOT NULL,
+	"prefix" text NOT NULL,
+	"last_used_at" timestamp with time zone,
+	"revoked" boolean DEFAULT false NOT NULL,
+	CONSTRAINT "api_tokens_token_hash_unique" UNIQUE("token_hash")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "free_llm"."app_logs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -188,32 +205,24 @@ CREATE TABLE IF NOT EXISTS "free_llm"."users" (
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
-DROP TABLE "free_llm"."flm_api_tokens";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_app_logs";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_cooldowns";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_model_runtime_stats";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_models";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_providers";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_rate_limit_counters";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_refresh_tokens";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_routing_strategies";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_settings";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_strategy_model_order";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_user_models";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_user_provider_keys";--> statement-breakpoint
-DROP TABLE "free_llm"."flm_users";--> statement-breakpoint
-ALTER TABLE "free_llm"."flm_request_logs" RENAME TO "api_tokens";--> statement-breakpoint
-DROP INDEX IF EXISTS "request_logs_user_created_idx";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "created_by" integer;--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "modified_by" integer;--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "modified_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "is_active" boolean DEFAULT true NOT NULL;--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "is_deleted" boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "token_hash" text NOT NULL;--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "name" text NOT NULL;--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "prefix" text NOT NULL;--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "last_used_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD COLUMN "revoked" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "free_llm"."api_tokens" ADD CONSTRAINT "api_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "free_llm"."users"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "free_llm"."api_tokens" ADD CONSTRAINT "api_tokens_created_by_fk" FOREIGN KEY ("created_by") REFERENCES "free_llm"."users"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "free_llm"."api_tokens" ADD CONSTRAINT "api_tokens_modified_by_fk" FOREIGN KEY ("modified_by") REFERENCES "free_llm"."users"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "free_llm"."models" ADD CONSTRAINT "models_provider_id_providers_id_fk" FOREIGN KEY ("provider_id") REFERENCES "free_llm"."providers"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
@@ -322,6 +331,9 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "api_tokens_created_by_idx" ON "free_llm"."api_tokens" USING btree ("created_by");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "api_tokens_modified_by_idx" ON "free_llm"."api_tokens" USING btree ("modified_by");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "api_tokens_user_id_idx" ON "free_llm"."api_tokens" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "app_logs_level_created_idx" ON "free_llm"."app_logs" USING btree ("level","created_at");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "cooldowns_key_id_idx" ON "free_llm"."cooldowns" USING btree ("key_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "cooldowns_model_id_idx" ON "free_llm"."cooldowns" USING btree ("model_id");--> statement-breakpoint
@@ -348,38 +360,4 @@ CREATE INDEX IF NOT EXISTS "user_provider_keys_modified_by_idx" ON "free_llm"."u
 CREATE INDEX IF NOT EXISTS "user_provider_keys_user_id_idx" ON "free_llm"."user_provider_keys" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "user_provider_keys_provider_id_idx" ON "free_llm"."user_provider_keys" USING btree ("provider_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "users_created_by_idx" ON "free_llm"."users" USING btree ("created_by");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "users_modified_by_idx" ON "free_llm"."users" USING btree ("modified_by");--> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "free_llm"."api_tokens" ADD CONSTRAINT "api_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "free_llm"."users"("id") ON DELETE cascade ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "free_llm"."api_tokens" ADD CONSTRAINT "api_tokens_created_by_fk" FOREIGN KEY ("created_by") REFERENCES "free_llm"."users"("id") ON DELETE set null ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "free_llm"."api_tokens" ADD CONSTRAINT "api_tokens_modified_by_fk" FOREIGN KEY ("modified_by") REFERENCES "free_llm"."users"("id") ON DELETE set null ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "api_tokens_created_by_idx" ON "free_llm"."api_tokens" USING btree ("created_by");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "api_tokens_modified_by_idx" ON "free_llm"."api_tokens" USING btree ("modified_by");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "api_tokens_user_id_idx" ON "free_llm"."api_tokens" USING btree ("user_id");--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "strategy_id";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "provider_key_id";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "requested_model";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "routed_provider";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "routed_model";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "fallback_attempts";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "latency_ms";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "input_tokens";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "output_tokens";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "cost_estimate";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "cost_saved";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" DROP COLUMN IF EXISTS "status";--> statement-breakpoint
-ALTER TABLE "free_llm"."api_tokens" ADD CONSTRAINT "api_tokens_token_hash_unique" UNIQUE("token_hash");
+CREATE INDEX IF NOT EXISTS "users_modified_by_idx" ON "free_llm"."users" USING btree ("modified_by");
