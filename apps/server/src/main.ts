@@ -37,6 +37,10 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   applyGlobalConfig(app);
 
+  // Replace the default NestJS logger with Pino for all request-time logging.
+  const { Logger } = await import('nestjs-pino');
+  app.useLogger(app.get(Logger));
+
   // Read MAX_BODY_SIZE from config (default 1mb) and apply it to the JSON body parser.
   // WHY: chat-completion payloads can be large (hundreds of KB). The Express default of
   // 100 KB causes PayloadTooLargeError. Making it configurable per deployment avoids both

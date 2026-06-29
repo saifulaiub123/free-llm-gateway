@@ -1,5 +1,4 @@
 import { type INestApplication, RequestMethod, ValidationPipe } from '@nestjs/common';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor.js';
 
 /**
@@ -12,13 +11,18 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
  * Two route roots: management controllers live under the global `api/v1` prefix; the OpenAI-compatible
  * gateway controllers are mounted at bare `v1` and excluded from this prefix (they stay wire-compatible
  * and skip the response envelope).
+ *
+ * NOTE: `AllExceptionsFilter` is NOT registered here — it is wired via the `APP_FILTER` provider
+ * token in `AppModule` so it gets DI access to `AppLogService` for persisting 5xx / 4xx errors to
+ * the database.
  */
 export function applyGlobalConfig(app: INestApplication): void {
   app.setGlobalPrefix('api/v1', {
     exclude: [{ path: 'v1/(.*)', method: RequestMethod.ALL }],
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
-  app.enableCors();
+  app.enableCors({
+    origin: ['https://llm.scraperq.com', 'http://localhost:5173'],
+  });
 }

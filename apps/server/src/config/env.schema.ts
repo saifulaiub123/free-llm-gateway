@@ -35,6 +35,10 @@ export const envSchema = z.object({
 
   // Per-request /v1 logs older than this are pruned by a scheduled retention job (TASK-056).
   REQUEST_LOG_RETENTION_DAYS: z.coerce.number().int().positive().default(90),
+
+  // --- Logging ---
+  // Pino log level: fatal | error | warn | info | debug | trace.
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('error'),
 });
 
 /** Fully-validated, typed environment configuration. */
