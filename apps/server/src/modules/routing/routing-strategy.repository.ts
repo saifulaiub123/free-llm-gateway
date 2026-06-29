@@ -42,7 +42,7 @@ export class RoutingStrategyRepository extends BaseRepository<typeof routingStra
       .where(
         and(
           this.scopedToUser(userId),
-          eq(routingStrategies.type, type as StrategyType),
+          eq(routingStrategies.name, type as StrategyType),
           eq(routingStrategies.isDeleted, false),
         ),
       )
